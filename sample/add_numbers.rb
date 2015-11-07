@@ -29,9 +29,8 @@ def create_device()
     err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_CPU, 1, dev_buf, nil)
   end
   abort("Couldn't access any devices") if err < 0
-  dev = dev_buf.unpack("Q")[0]
 
-  return dev
+  return dev_buf.unpack("Q")[0]
 end
 
 
@@ -58,8 +57,7 @@ def build_program(ctx, dev, filename)
     log_size = log_size_buf.unpack("L")[0]
     program_log = ' ' * log_size
     clGetProgramBuildInfo(program, dev, CL_PROGRAM_BUILD_LOG, log_size, program_log, nil)
-    printf("%s\n", program_log)
-    exit(1)
+    abort(program_log)
   end
 
   return program
@@ -73,10 +71,10 @@ if $0 == __FILE__
   input_buffer = nil # cl_mem
   sum_buffer = nil   # cl_mem
   num_groups = 0     # cl_int
+  err_buf = ' ' * 4
 
   # Create device and context
   device = create_device()
-  err_buf = ' ' * 4
   context = clCreateContext(nil, 1, [device].pack("Q"), nil, nil, err_buf)
   err = err_buf.unpack("l")[0]
   abort("Couldn't create a context") if err < 0
@@ -88,8 +86,8 @@ if $0 == __FILE__
   global_size = 8
   local_size = 4
   num_groups = global_size/local_size
-  input_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, ARRAY_SIZE * Fiddle::SIZEOF_FLOAT, data.pack("F*"), err_buf)
-  sum_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, num_groups * Fiddle::SIZEOF_FLOAT, sum.pack("F*"), err_buf)
+  input_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY  | CL_MEM_COPY_HOST_PTR, ARRAY_SIZE * Fiddle::SIZEOF_FLOAT, data.pack("F*"), err_buf)
+  sum_buffer   = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, num_groups * Fiddle::SIZEOF_FLOAT, sum.pack("F*"),  err_buf)
   err = err_buf.unpack("l")[0]
   abort("Couldn't create a buffer") if err < 0
 
@@ -116,19 +114,15 @@ if $0 == __FILE__
   # Read the kernel's output
   sum_buf = ' ' * 4 * num_groups
   err = clEnqueueReadBuffer(queue, sum_buffer, CL_TRUE, 0, Fiddle::SIZEOF_FLOAT * num_groups, sum_buf, 0, nil, nil)
-  sum = sum_buf.unpack("F2")
+  sum = sum_buf.unpack("F#{num_groups}")
   abort("Couldn't read the buffer") if err < 0
 
   # Check result
-  total = 0.0
-  num_groups.times { |j| total += sum[j] }
-  actual_sum = (ARRAY_SIZE/2*(ARRAY_SIZE-1)).to_f
+  total = sum.inject(:+)
   printf("Computed sum = %.1f.\n", total)
-  if (total - actual_sum).abs > 0.01*(actual_sum).abs
-    printf("Check failed.\n")
-  else
-    printf("Check passed.\n")
-  end
+  actual_sum = (ARRAY_SIZE/2*(ARRAY_SIZE-1)).to_f
+  result = (total - actual_sum).abs > 0.01*(actual_sum).abs ? "failed" : "passed"
+  puts("Check #{result}.")
 
   # Deallocate resources
   clReleaseKernel(kernel)

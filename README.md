@@ -3,7 +3,7 @@
 # Yet another OpenCL wrapper for Ruby #
 
 *   Created : 2015-10-25
-*   Last modified : 2015-11-03
+*   Last modified : 2015-11-07
 
 
 ## Features ##
