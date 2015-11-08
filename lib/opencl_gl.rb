@@ -39,7 +39,6 @@ module OpenCL
     # opaque pointer
     typealias 'cl_GLsync', 'void*'
 
-
     # cl_context     : context
     # cl_mem_flags   : flags
     # cl_GLuint      : bufobj

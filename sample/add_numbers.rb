@@ -3,9 +3,14 @@
 # http://www.drdobbs.com/parallel/a-gentle-introduction-to-opencl/231002854
 
 require_relative '../lib/opencl'
+require_relative '../lib/opencl_ext'
+require_relative '../lib/opencl_gl'
+require_relative '../lib/opencl_gl_ext'
 
 # Load DLL
 OpenCL.load_lib('/System/Library/Frameworks/OpenCL.framework/OpenCL') # For Mac OS X
+OpenCL.import_gl
+
 # OpenCL.load_lib('c:/Program Files/NVIDIA Corporation/OpenCL/OpenCL64.dll') # For Windows x86-64 NVIDIA GPU (* comes with NVIDIA Driver)
 
 include OpenCL
@@ -21,6 +26,9 @@ def create_device()
   err = clGetPlatformIDs(1, platforms_buf, nil)
   platform = platforms_buf.unpack("L")[0]
   abort("Couldn't identify a platform") if err < 0
+
+OpenCL.import_gl_ext(platform)
+OpenCL.import_ext(platform)
 
   # Access a device
   dev_buf = ' ' * 4 * 32
