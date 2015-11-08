@@ -6,6 +6,10 @@ require_relative 'opencl'
 
 module OpenCL
 
+  #
+  # cl_khr_gl_sharing
+  #
+
   # Additional Error Codes
   CL_INVALID_GL_SHAREGROUP_REFERENCE_KHR  = -1000
 
@@ -20,12 +24,20 @@ module OpenCL
   CL_WGL_HDC_KHR                          = 0x200B
   CL_CGL_SHAREGROUP_KHR                   = 0x200C
 
+  #
+  # cl_khr_gl_event
+  #
+
+  CL_COMMAND_GL_FENCE_SYNC_OBJECT_KHR     = 0x200D
+
   # cl_platform_id : platform
   def self.import_gl_ext(platform)
     return false unless (@@cl_import_done && @@cl_gl_import_done)
 
-    # aliases
-    # cl_khr_gl_sharing extension
+    #
+    # cl_khr_gl_sharing
+    #
+
     typealias 'cl_gl_context_info', 'cl_uint'
 
     unless clGetExtensionFunctionAddressForPlatform(platform, 'clGetGLContextInfoKHR').null?
@@ -37,7 +49,18 @@ module OpenCL
       extern 'cl_int clGetGLContextInfoKHR(const cl_context_properties*, cl_gl_context_info, size_t, void*, size_t*)'
     end
 
+    #
+    # cl_khr_gl_event
+    #
+
+    unless clGetExtensionFunctionAddressForPlatform(platform, 'clCreateEventFromGLsyncKHR').null?
+      # cl_context           : context
+      # cl_GLsync            : cl_GLsync
+      # cl_int *             : errcode_ret
+      extern 'cl_event clCreateEventFromGLsyncKHR(cl_context, cl_GLsync, cl_int*)'
+    end
+
     return true
- end
+  end
 
 end
