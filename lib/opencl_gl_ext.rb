@@ -30,6 +30,14 @@ module OpenCL
 
   CL_COMMAND_GL_FENCE_SYNC_OBJECT_KHR     = 0x200D
 
+  #
+  # cl_APPLE_gl_sharing
+  #
+  CL_CONTEXT_PROPERTY_USE_CGL_SHAREGROUP_APPLE        = 0x10000000
+  CL_CGL_DEVICE_FOR_CURRENT_VIRTUAL_SCREEN_APPLE      = 0x10000002
+  CL_CGL_DEVICES_FOR_SUPPORTED_VIRTUAL_SCREENS_APPLE  = 0x10000003
+  CL_INVALID_GL_CONTEXT_APPLE                         = -1000
+
   # cl_platform_id : platform
   def self.import_gl_ext(platform)
     return false unless (@@cl_import_done && @@cl_gl_import_done)
@@ -58,6 +66,20 @@ module OpenCL
       # cl_GLsync            : cl_GLsync
       # cl_int *             : errcode_ret
       extern 'cl_event clCreateEventFromGLsyncKHR(cl_context, cl_GLsync, cl_int*)'
+    end
+
+    #
+    # cl_APPLE_gl_sharing
+    #
+
+    unless clGetExtensionFunctionAddressForPlatform(platform, 'clGetGLContextInfoAPPLE').null?
+      # cl_context          : context
+      # void *              : platform_gl_ctx
+      # cl_gl_platform_info : param_name
+      # size_t              : param_value_size
+      # void *              : param_value
+      # size_t *            : param_value_size_ret
+      extern 'cl_int clGetGLContextInfoAPPLE ( cl_context, void *, cl_gl_platform_info, size_t, void *, size_t *)'
     end
 
     return true
