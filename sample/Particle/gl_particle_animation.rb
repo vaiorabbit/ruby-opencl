@@ -37,6 +37,34 @@ $cl_start_velocity = nil
 $cl_gl_position = nil
 $cl_gl_color = nil
 
+=begin
+# Saves as .tga
+$ss_name = "ss0000.tga"
+$ss_id = 0
+def save_screenshot(w, h, name)
+  image = Fiddle::Pointer.malloc(Fiddle::SIZEOF_CHAR * w * h * 4)
+  return if image == nil
+
+  glReadPixels(0, 0, w, h, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, image)
+
+  File.open( name, 'wb' ) do |fout|
+    fout.write [0].pack('c')      # identsize
+    fout.write [0].pack('c')      # colourmaptype
+    fout.write [2].pack('c')      # imagetype
+    fout.write [0].pack('s')      # colourmapstart
+    fout.write [0].pack('s')      # colourmaplength
+    fout.write [0].pack('c')      # colourmapbits
+    fout.write [0].pack('s')      # xstart
+    fout.write [0].pack('s')      # ystart
+    fout.write [w].pack('s')      # image_width
+    fout.write [h].pack('s')      # image_height
+    fout.write [8 * 4].pack('c')  # image_bits_per_pixel
+    fout.write [8].pack('c')      # descriptor
+
+    fout.write image[0, Fiddle::SIZEOF_CHAR * w * h * 4]
+  end
+end
+=end
 
 # cl_context : ctx, cl_device_id : dev, String : kernel_source
 def build_program(ctx, dev, kernel_source)
@@ -197,6 +225,11 @@ def on_display()
   glDisable(GL_BLEND)
 
   glutSwapBuffers()
+=begin
+  $ss_name = sprintf("ss%05d.tga", $ss_id)
+  save_screenshot($width, $height, $ss_name)
+  $ss_id += 1
+=end
 end
 
 if __FILE__ == $0
