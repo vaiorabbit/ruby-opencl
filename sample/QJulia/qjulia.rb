@@ -261,23 +261,22 @@ def init_cl()
 
 end
 
-require 'benchmark'
-
 def recompute()
-  clSetKernelArg($cl_kern, 0, Fiddle::SIZEOF_VOIDP, [$cl_result_memobj].pack("Q"))
+  clSetKernelArg($cl_kern, 0, Fiddle::SIZEOF_VOIDP, [$cl_result_memobj.to_i].pack("Q"))
   clSetKernelArg($cl_kern, 1, 4 * Fiddle::SIZEOF_FLOAT, $mu_C.pack("F4"))
   clSetKernelArg($cl_kern, 2, 4 * Fiddle::SIZEOF_FLOAT, $color_C.pack("F4"))
   clSetKernelArg($cl_kern, 3, Fiddle::SIZEOF_FLOAT, [0.003].pack("F"))
-  global = [($width % $workgroup_size[0] != 0 ? ($width / $workgroup_size[0] + 1) : $width / $workgroup_size[0]) * $width,
-            ($height % $workgroup_size[1] != 0 ? ($height / $workgroup_size[0] + 1) : $height / $workgroup_size[1]) * $height]
+
+  global = [($width % $workgroup_size[0] != 0 ? ($width / $workgroup_size[0] + 1) : $width / $workgroup_size[0]) * $workgroup_size[0],
+            ($height % $workgroup_size[1] != 0 ? ($height / $workgroup_size[1] + 1) : $height / $workgroup_size[1]) * $workgroup_size[1]]
   local = [$workgroup_size[0], $workgroup_size[1]]
 
   clEnqueueNDRangeKernel($cl_cq, $cl_kern, 2, nil, global.pack("Q2"), local.pack("Q2"), 0, nil, nil)
-  clEnqueueAcquireGLObjects($cl_cq, 1, [$cl_image_memobj].pack("Q"), 0, nil, 0)
+  clEnqueueAcquireGLObjects($cl_cq, 1, [$cl_image_memobj.to_i].pack("Q"), 0, nil, 0)
   origin = [0, 0, 0]
   region = [$width, $height, 1]
   clEnqueueCopyBufferToImage($cl_cq, $cl_result_memobj, $cl_image_memobj, 0, origin.pack("Q3"), region.pack("Q3"), 0, nil ,0)
-  clEnqueueReleaseGLObjects($cl_cq, 1, [$cl_image_memobj].pack("Q"), 0, nil, 0)
+  clEnqueueReleaseGLObjects($cl_cq, 1, [$cl_image_memobj.to_i].pack("Q"), 0, nil, 0)
 end
 
 ################################################################################
@@ -338,10 +337,8 @@ if __FILE__ == $0
   glfwSetKeyCallback(window, key_callback)
 
   glfwMakeContextCurrent( window )
-  glfwSwapInterval( 0 )
+  glfwSwapInterval( 1 )
   reshape_callback.call(window, $width, $height)
-
-  glfwSetTime(0.0)
 
   init_gl()
   init_cl()
