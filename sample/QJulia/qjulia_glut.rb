@@ -1,8 +1,16 @@
-require '../util/setup_glfw'
+require '../util/setup_glut'
 require_relative '../../lib/opencl'
 require_relative '../../lib/opencl_ext'
 require_relative '../../lib/opencl_gl'
 require_relative '../../lib/opencl_gl_ext'
+
+def checkErrors(desc="")
+  e = glGetError()
+  if e != GL_NO_ERROR
+    $stderr.puts "OpenGL error in \"#{desc}\": #{gluErrorString(e)} (#{e})\n"
+    exit
+  end
+end
 
 # Load DLL
 OpenCL.load_lib('/System/Library/Frameworks/OpenCL.framework/OpenCL') # For Mac OS X
@@ -261,8 +269,6 @@ def init_cl()
 
 end
 
-require 'benchmark'
-
 def recompute()
   clSetKernelArg($cl_kern, 0, Fiddle::SIZEOF_VOIDP, [$cl_result_memobj].pack("Q"))
   clSetKernelArg($cl_kern, 1, 4 * Fiddle::SIZEOF_FLOAT, $mu_C.pack("F4"))
@@ -281,6 +287,20 @@ def recompute()
 end
 
 ################################################################################
+
+def reshape(w, h)
+  glViewport(0, 0, w, h)
+  glMatrixMode(GL_MODELVIEW)
+  glLoadIdentity()
+  glMatrixMode(GL_PROJECTION)
+  glLoadIdentity()
+  glClear(GL_COLOR_BUFFER_BIT)
+
+  # TODO rebuild CL/GL resources
+
+  $width = w
+  $height = h
+end
 
 def display()
   glClearColor(0.0, 0.0, 0.0, 0.0)
@@ -301,63 +321,35 @@ def display()
   render_texture(nil)
 
   glFinish()
+  glutSwapBuffers()
 end
 
-reshape_callback = GLFW::create_callback(:GLFWframebuffersizefun) do |window, w, h|
-  glViewport(0, 0, w, h)
-  glMatrixMode(GL_MODELVIEW)
-  glLoadIdentity()
-  glMatrixMode(GL_PROJECTION)
-  glLoadIdentity()
-  glClear(GL_COLOR_BUFFER_BIT)
-
-  # TODO rebuild CL/GL resources
-
-  $width = w
-  $height = h
-end
-
-# Press ESC to exit.
-key_callback = GLFW::create_callback(:GLFWkeyfun) do |window_handle, key, scancode, action, mods|
-  if key == GLFW_KEY_ESCAPE && action == GLFW_PRESS
-    glfwSetWindowShouldClose(window_handle, 1)
+def key(key, x, y)
+  case key
+  when 27 # Press ESC to exit.
+    exit
   end
+end
+
+def idle()
+  glutPostRedisplay()
 end
 
 
 if __FILE__ == $0
-  glfwInit()
-
-  glfwDefaultWindowHints()
-  glfwWindowHint(GLFW_DEPTH_BITS, 16)
-  glfwWindowHint(GLFW_RESIZABLE, GL_FALSE) # TODO remove after making 'rebuild CL/GL resources'
-
-  window = glfwCreateWindow( $width, $height, "Quaternion Julia Set", nil, nil )
-
-  glfwSetFramebufferSizeCallback(window, reshape_callback)
-  glfwSetKeyCallback(window, key_callback)
-
-  glfwMakeContextCurrent( window )
-  glfwSwapInterval( 0 )
-  reshape_callback.call(window, $width, $height)
-
-  glfwSetTime(0.0)
+  glutInit([1].pack('I'), [""].pack('p'))
+  glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH)
+  glutInitWindowSize($width, $height)
+  glutInitWindowPosition(0, 0)
+  window = glutCreateWindow("Quaternion Julia Set")
 
   init_gl()
   init_cl()
 
-  while true
-    # Draw one frame
-    display()
+  glutDisplayFunc(GLUT.create_callback(:GLUTDisplayFunc, method(:display).to_proc))  # Called by GLUT every frame
+  glutKeyboardFunc(GLUT.create_callback(:GLUTKeyboardFunc, method(:key).to_proc))
+  glutReshapeFunc(GLUT.create_callback(:GLUTReshapeFunc, method(:reshape).to_proc))
+  glutIdleFunc(GLUT.create_callback(:GLUTIdleFunc, method(:idle).to_proc))
 
-    # Swap buffers
-    glfwSwapBuffers(window)
-    glfwPollEvents()
-
-    # Check if we are still running
-    break if glfwWindowShouldClose(window) != 0
-  end
-
-  glfwDestroyWindow( window )
-  glfwTerminate()
+  glutMainLoop()
 end

@@ -29,7 +29,7 @@ $cl_ctx = nil
 $cl_cq = nil
 $cl_prog = nil
 $cl_kern = nil
-$cl_image_memobj = nil
+$host_image_buffer = nil
 $cl_result_memobj = nil
 $max_workgroup_size = nil
 $workgroup_size = [nil, nil]
@@ -231,13 +231,8 @@ def init_cl()
   abort("Qjulia requires images: Images not supported on this device.") if image_support == CL_FALSE
 
   # Context
-  kCGLContext = CGLGetCurrentContext() # CGLContextObj
-  kCGLShareGroup = CGLGetShareGroup(kCGLContext) # CGLShareGroupObj
-  props = [ CL_CONTEXT_PROPERTY_USE_CGL_SHAREGROUP_APPLE, kCGLShareGroup,
-            0 ]
-
   errcode_ret_buf = ' ' * 4
-  $cl_ctx = clCreateContext(props.pack("Q*"), 0, 0, nil, nil, errcode_ret_buf)
+  $cl_ctx = clCreateContext(nil, 1, cl_devices_buf, nil, nil, errcode_ret_buf)
 
   # Command Queues
   $cl_cq = clCreateCommandQueue($cl_ctx, cl_device_ids[0], 0, errcode_ret_buf)
@@ -252,7 +247,7 @@ def init_cl()
   $workgroup_size[0] = $max_workgroup_size > 1 ? ($max_workgroup_size / $workgroup_items) : $max_workgroup_size
   $workgroup_size[1] = $max_workgroup_size / $workgroup_size[0]
 
-  $cl_image_memobj = clCreateFromGLTexture($cl_ctx, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, $gl_tex_id, errcode_ret_buf);
+  $host_image_buffer = Fiddle::Pointer.malloc($width * $height * Fiddle::SIZEOF_CHAR * 4)
   $cl_result_memobj = clCreateBuffer($cl_ctx, CL_MEM_WRITE_ONLY, Fiddle::SIZEOF_CHAR * 4 * $width * $height, nil, nil);
 
   random_color($color_A)
@@ -273,11 +268,8 @@ def recompute()
   local = [$workgroup_size[0], $workgroup_size[1]]
 
   clEnqueueNDRangeKernel($cl_cq, $cl_kern, 2, nil, global.pack("Q2"), local.pack("Q2"), 0, nil, nil)
-  clEnqueueAcquireGLObjects($cl_cq, 1, [$cl_image_memobj].pack("Q"), 0, nil, 0)
-  origin = [0, 0, 0]
-  region = [$width, $height, 1]
-  clEnqueueCopyBufferToImage($cl_cq, $cl_result_memobj, $cl_image_memobj, 0, origin.pack("Q3"), region.pack("Q3"), 0, nil ,0)
-  clEnqueueReleaseGLObjects($cl_cq, 1, [$cl_image_memobj].pack("Q"), 0, nil, 0)
+  clEnqueueReadBuffer($cl_cq, $cl_result_memobj, CL_TRUE, 0, $width * $height * Fiddle::SIZEOF_CHAR * 4, $host_image_buffer, 0, nil ,0)
+
 end
 
 ################################################################################
@@ -298,7 +290,7 @@ def display()
 
   recompute()
 
-  render_texture(nil)
+  render_texture($host_image_buffer)
 
   glFinish()
 end
@@ -347,12 +339,16 @@ if __FILE__ == $0
   init_cl()
 
   while true
+  Benchmark.bm() { |x|
+    x.report("test") {
     # Draw one frame
     display()
 
     # Swap buffers
     glfwSwapBuffers(window)
     glfwPollEvents()
+    }
+  }
 
     # Check if we are still running
     break if glfwWindowShouldClose(window) != 0
