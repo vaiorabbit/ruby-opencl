@@ -1,3 +1,4 @@
+require 'rbconfig'
 require '../util/setup_glfw'
 require_relative '../../lib/opencl'
 require_relative '../../lib/opencl_ext'
@@ -5,9 +6,12 @@ require_relative '../../lib/opencl_gl'
 require_relative '../../lib/opencl_gl_ext'
 
 # Load DLL
-OpenCL.load_lib('/System/Library/Frameworks/OpenCL.framework/OpenCL') # For Mac OS X
+# OpenCL.load_lib('/System/Library/Frameworks/OpenCL.framework/OpenCL') # For Mac OS X
 # OpenCL.load_lib('c:/Program Files/NVIDIA Corporation/OpenCL/OpenCL64.dll') # For Windows x86-64 NVIDIA GPU (* comes with NVIDIA Driver)
-
+ OpenCL.load_lib('c:/Windows/System32/OpenCL.dll') # For Windows
+# OpenCL.load_lib('c:/Windows/System32/nvopencl.dll') # For Windows
+# OpenCL.load_lib('c:/Windows/System32/Intelopencl64.dll') # For Windows
+# OpenCL.load_lib('C:/Windows/SysWOW64/Intelopencl32.dll')
 include OpenCL
 
 $width = 512
@@ -204,7 +208,36 @@ def build_program(ctx, dev, kernel_source)
   return program
 end
 
+def create_context(platform, device_ids)
+  errcode_ret_buf = ' ' * 4
+  case RbConfig::CONFIG['host_os']
+  when /mswin|msys|mingw|cygwin/
+    # for Windows
+    props = [ CL_GL_CONTEXT_KHR, wglGetCurrentContext(),
+              CL_WGL_HDC_KHR, wglGetCurrentDC(),
+              CL_CONTEXT_PLATFORM, platform,
+              0 ]
+    return clCreateContext(props.pack("Q*"), 1, device_ids.pack("Q#{device_ids.length}"), nil, nil, errcode_ret_buf)
+
+  when /darwin/
+    # for Mac OS X
+    kCGLContext = CGLGetCurrentContext() # CGLContextObj
+    kCGLShareGroup = CGLGetShareGroup(kCGLContext) # CGLShareGroupObj
+    props = [ CL_CONTEXT_PROPERTY_USE_CGL_SHAREGROUP_APPLE, kCGLShareGroup,
+              0 ]
+    return clCreateContext(props.pack("Q*"), 0, nil, nil, nil, errcode_ret_buf)
+
+  when /linux/
+    clCreateContext(nil, 0, nil, nil, nil, errcode_ret_buf)
+
+  else
+    raise RuntimeError, "OpenCL : Unknown OS: #{host_os.inspect}"
+
+  end
+end
+
 def init_cl()
+  errcode_ret_buf = ' ' * 4
   cl_platforms_buf = ' ' * 4
   cl_platforms_count_buf = ' ' * 4
   # Platform
@@ -231,13 +264,7 @@ def init_cl()
   abort("Qjulia requires images: Images not supported on this device.") if image_support == CL_FALSE
 
   # Context
-  kCGLContext = CGLGetCurrentContext() # CGLContextObj
-  kCGLShareGroup = CGLGetShareGroup(kCGLContext) # CGLShareGroupObj
-  props = [ CL_CONTEXT_PROPERTY_USE_CGL_SHAREGROUP_APPLE, kCGLShareGroup,
-            0 ]
-
-  errcode_ret_buf = ' ' * 4
-  $cl_ctx = clCreateContext(props.pack("Q*"), 0, 0, nil, nil, errcode_ret_buf)
+  $cl_ctx = create_context(cl_platform, cl_device_ids)
 
   # Command Queues
   $cl_cq = clCreateCommandQueue($cl_ctx, cl_device_ids[0], 0, errcode_ret_buf)
@@ -247,7 +274,7 @@ def init_cl()
   $cl_kern = clCreateKernel($cl_prog, "QJuliaKernel", errcode_ret_buf);
 
   max_workgroup_size_buf = ' ' * 8
-  clGetKernelWorkGroupInfo($cl_kern, cl_device_ids[0], CL_KERNEL_WORK_GROUP_SIZE, Fiddle::SIZEOF_LONG, max_workgroup_size_buf, nil)
+  clGetKernelWorkGroupInfo($cl_kern, cl_device_ids[0], CL_KERNEL_WORK_GROUP_SIZE, Fiddle::SIZEOF_LONG_LONG, max_workgroup_size_buf, nil)
   $max_workgroup_size = max_workgroup_size_buf.unpack("Q")[0]
   $workgroup_size[0] = $max_workgroup_size > 1 ? ($max_workgroup_size / $workgroup_items) : $max_workgroup_size
   $workgroup_size[1] = $max_workgroup_size / $workgroup_size[0]

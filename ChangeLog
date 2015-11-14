@@ -1,3 +1,7 @@
+2015-11-14  vaiorabbit  <http://twitter.com/vaiorabbit>
+
+	* lib/opencl.rb (extern): A new argument 'func_addr' added. (On Windows, extern fails on some ext functions regardless of the result of 'clGetExtensionFunctionAddressForPlatform')
+
 2015-11-12  vaiorabbit  <http://twitter.com/vaiorabbit>
 
 	* sample/QJulia: Added.

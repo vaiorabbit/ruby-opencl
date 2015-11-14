@@ -16,10 +16,24 @@ module OpenCL
   # Ref.: /lib/ruby/2.0.0/fiddle/import.rb
   #
   CL_FUNCTIONS_MAP = {}
-  def self.extern(signature, *opts)
+
+  @cl_dll = nil
+
+  # Ref.: CALL_TYPE_TO_ABI (Fiddle::Importer)
+  def call_sym_to_abi(sym)
+    if sym == :stdcall && const_defined?(Fiddle::STDCALL)
+      Fiddle::Function::STDCALL
+    else
+      Fiddle::Function::DEFAULT
+    end
+  end
+  private :call_sym_to_abi
+
+  def self.extern(signature, *opts, func_addr: nil)
     symname, ctype, argtype = parse_signature(signature, @type_alias)
     opt = parse_bind_options(opts)
-    f = import_function(symname, ctype, argtype, opt[:call_type])
+    f = (func_addr == nil) ? import_function(symname, ctype, argtype, opt[:call_type]) : Fiddle::Function.new(func_addr, argtype, ctype, call_sym_to_abi(opt[:call_type]), name: symname)
+
     name = symname.gsub(/@.+/,'')
     CL_FUNCTIONS_MAP[name] = f
     begin
@@ -570,7 +584,8 @@ module OpenCL
 
   # Load native library.
   def self.load_lib(libpath = nil)
-    dlload(libpath)
+    @@cl_dll = dlopen(libpath) # Fiddle::Handle.new(libpath, Fiddle::Handle::RTLD_LAZY|Fiddle::Handle::RTLD_GLOBAL)
+    dlload(@@cl_dll)
     import_symbols() unless @@cl_import_done
   end
 

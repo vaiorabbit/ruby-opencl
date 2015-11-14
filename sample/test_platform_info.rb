@@ -1,7 +1,8 @@
 require_relative '../lib/opencl'
 
-OpenCL.load_lib('/System/Library/Frameworks/OpenCL.framework/OpenCL') # For Mac OS X
+# OpenCL.load_lib('/System/Library/Frameworks/OpenCL.framework/OpenCL') # For Mac OS X
 # OpenCL.load_lib('c:/Program Files/NVIDIA Corporation/OpenCL/OpenCL64.dll') # For Windows x86-64 NVIDIA GPU (* comes with NVIDIA Driver)
+OpenCL.load_lib('c:/Windows/System32/OpenCL.dll') # For Windows
 cl_platforms_buf = ' ' * 4
 
 OpenCL.clGetPlatformIDs(1, cl_platforms_buf, nil)

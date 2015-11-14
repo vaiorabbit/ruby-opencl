@@ -48,38 +48,41 @@ module OpenCL
 
     typealias 'cl_gl_context_info', 'cl_uint'
 
-    unless clGetExtensionFunctionAddressForPlatform(platform, 'clGetGLContextInfoKHR').null?
+    addr = clGetExtensionFunctionAddressForPlatform(platform, 'clGetGLContextInfoKHR')
+    unless addr.null?
       # const cl_context_properties * : properties
       # cl_gl_context_info            : param_name
       # size_t                        : param_value_size
       # void *                        : param_value
       # size_t *                      : param_value_size_ret
-      extern 'cl_int clGetGLContextInfoKHR(const cl_context_properties*, cl_gl_context_info, size_t, void*, size_t*)'
+      extern 'cl_int clGetGLContextInfoKHR(const cl_context_properties*, cl_gl_context_info, size_t, void*, size_t*)', func_addr: addr
     end
 
     #
     # cl_khr_gl_event
     #
 
-    unless clGetExtensionFunctionAddressForPlatform(platform, 'clCreateEventFromGLsyncKHR').null?
+    addr = clGetExtensionFunctionAddressForPlatform(platform, 'clCreateEventFromGLsyncKHR')
+    unless addr.null?
       # cl_context           : context
       # cl_GLsync            : cl_GLsync
       # cl_int *             : errcode_ret
-      extern 'cl_event clCreateEventFromGLsyncKHR(cl_context, cl_GLsync, cl_int*)'
+      extern 'cl_event clCreateEventFromGLsyncKHR(cl_context, cl_GLsync, cl_int*)', func_addr: addr
     end
 
     #
     # cl_APPLE_gl_sharing
     #
 
-    unless clGetExtensionFunctionAddressForPlatform(platform, 'clGetGLContextInfoAPPLE').null?
+    addr = clGetExtensionFunctionAddressForPlatform(platform, 'clGetGLContextInfoAPPLE')
+    unless addr.null?
       # cl_context          : context
       # void *              : platform_gl_ctx
       # cl_gl_platform_info : param_name
       # size_t              : param_value_size
       # void *              : param_value
       # size_t *            : param_value_size_ret
-      extern 'cl_int clGetGLContextInfoAPPLE ( cl_context, void *, cl_gl_platform_info, size_t, void *, size_t *)'
+      extern 'cl_int clGetGLContextInfoAPPLE ( cl_context, void *, cl_gl_platform_info, size_t, void *, size_t *)', func_addr: addr
     end
 
     return true

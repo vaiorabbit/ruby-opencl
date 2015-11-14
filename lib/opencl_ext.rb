@@ -128,84 +128,93 @@ module OpenCL
     # cl_APPLE_SetMemObjectDestructor
     #
 
-    unless clGetExtensionFunctionAddressForPlatform(platform, 'clSetMemObjectDestructorAPPLE').null?
+    addr = clGetExtensionFunctionAddressForPlatform(platform, 'clSetMemObjectDestructorAPPLE')
+    unless addr.null?
       # cl_mem : memobj
       # void*  : pfn_notify(char *, void *, size_t, void *),
       # void*  : user_data
-      extern 'cl_int clSetMemObjectDestructorAPPLE(cl_mem, void*, void*)'
+      extern 'cl_int clSetMemObjectDestructorAPPLE(cl_mem, void*, void*)', func_addr: addr
     end
 
     #
     # cl_APPLE_ContextLoggingFunctions
     #
 
-    unless clGetExtensionFunctionAddressForPlatform(platform, 'clLogMessagesToSystemLogAPPLE').null?
+    addr = clGetExtensionFunctionAddressForPlatform(platform, 'clLogMessagesToSystemLogAPPLE')
+    unless addr.null?
       # const char * : errstr
       # const void * : private_info
       # size_t       : cb
       # void *       : user_data
-      extern 'void clLogMessagesToSystemLogAPPLE(const char*, const void*, size_t, void*)'
+      extern 'void clLogMessagesToSystemLogAPPLE(const char*, const void*, size_t, void*)', func_addr: addr
     end
 
-    unless clGetExtensionFunctionAddressForPlatform(platform, 'clLogMessagesToStdoutAPPLE').null?
+    addr = clGetExtensionFunctionAddressForPlatform(platform, 'clLogMessagesToStdoutAPPLE')
+    unless addr.null?
       # const char * : errstr
       # const void * : private_info
       # size_t       : cb
       # void *       : user_data
-      extern 'void clLogMessagesToStdoutAPPLE(const char*, const void*, size_t, void*)'
+      extern 'void clLogMessagesToStdoutAPPLE(const char*, const void*, size_t, void*)', func_addr: addr
     end
 
-    unless clGetExtensionFunctionAddressForPlatform(platform, 'clLogMessagesToStderrAPPLE').null?
+    addr = clGetExtensionFunctionAddressForPlatform(platform, 'clLogMessagesToStderrAPPLE')
+    unless addr.null?
       # const char * : errstr
       # const void * : private_info
       # size_t       : cb
       # void *       : user_data
-      extern 'void clLogMessagesToStderrAPPLE(const char*, const void*, size_t, void*)'
+      extern 'void clLogMessagesToStderrAPPLE(const char*, const void*, size_t, void*)', func_addr: addr
     end
 
     #
     # cl_khr_icd
     #
 
-    unless clGetExtensionFunctionAddressForPlatform(platform, 'clIcdGetPlatformIDsKHR').null?
+    addr = clGetExtensionFunctionAddressForPlatform(platform, 'clIcdGetPlatformIDsKHR')
+    unless addr.null?
       # cl_uint          : num_entries
       # cl_platform_id * : platforms
       # cl_uint *        : num_platforms
-      extern 'cl_int clIcdGetPlatformIDsKHR(cl_uint, cl_platform_id *, cl_uint *)'
+      extern 'cl_int clIcdGetPlatformIDsKHR(cl_uint, cl_platform_id *, cl_uint *)', func_addr: addr
     end
 
     #
     # cl_khr_terminate_context
     #
 
-    unless clGetExtensionFunctionAddressForPlatform(platform, 'clTerminateContextKHR').null?
+    addr = clGetExtensionFunctionAddressForPlatform(platform, 'clTerminateContextKHR')
+    unless addr.null?
       # cl_context : context
-      extern 'cl_int clTerminateContextKHR(cl_context)'
+      extern 'cl_int clTerminateContextKHR(cl_context)', func_addr: addr
     end
 
     #
     # cl_ext_device_fission
     #
 
-    unless clGetExtensionFunctionAddressForPlatform(platform, 'clReleaseDeviceEXT').null?
+    addr = clGetExtensionFunctionAddressForPlatform(platform, 'clReleaseDeviceEXT')
+    unless addr.null?
       # cl_device_id : device
-      extern 'cl_int clReleaseDeviceEXT(cl_device_id)'
+      extern 'cl_int clReleaseDeviceEXT(cl_device_id)', func_addr: addr
     end
 
-    unless clGetExtensionFunctionAddressForPlatform(platform, 'clRetainDeviceEXT').null?
+    addr = clGetExtensionFunctionAddressForPlatform(platform, 'clRetainDeviceEXT')
+    unless addr.null?
       # cl_device_id : device
-      extern 'cl_int clRetainDeviceEXT(cl_device_id)'
+      extern 'cl_int clRetainDeviceEXT(cl_device_id)', func_addr: addr
     end
 
     typealias 'cl_device_partition_property_ext', 'cl_ulong'
 
-    unless clGetExtensionFunctionAddressForPlatform(platform, 'clCreateSubDevicesEXT').null?
+    addr = clGetExtensionFunctionAddressForPlatform(platform, 'clCreateSubDevicesEXT')
+    unless addr.null?
       # cl_device_id                             : device
       # const cl_device_partition_property_ext * : properties
       # cl_uint                                  : num_entries
       # cl_device_id *                           : out_devices
       # cl_uint *                                : num_devices
-      extern 'cl_int clCreateSubDevicesEXT(cl_device_id, const cl_device_partition_property_ext *, cl_uint, cl_device_id *, cl_uint *)'
+      extern 'cl_int clCreateSubDevicesEXT(cl_device_id, const cl_device_partition_property_ext *, cl_uint, cl_device_id *, cl_uint *)', func_addr: addr
     end
 
     #
@@ -214,7 +223,8 @@ module OpenCL
 
     typealias 'cl_image_pitch_info_qcom', 'cl_uint'
 
-    unless clGetExtensionFunctionAddressForPlatform(platform, 'clGetDeviceImageInfoQCOM').null?
+    addr = clGetExtensionFunctionAddressForPlatform(platform, 'clGetDeviceImageInfoQCOM')
+    unless addr.null?
       # cl_device_id             : device
       # size_t                   : image_width
       # size_t                   : image_height
@@ -223,7 +233,7 @@ module OpenCL
       # size_t                   : param_value_size
       # void*                    : param_value
       # size_t*                  : param_value_size_ret
-      extern 'cl_int clGetDeviceImageInfoQCOM(cl_device_id, size_t, size_t, const cl_image_format*, cl_image_pitch_info_qcom, size_t, void*, size_t*)'
+      extern 'cl_int clGetDeviceImageInfoQCOM(cl_device_id, size_t, size_t, const cl_image_format*, cl_image_pitch_info_qcom, size_t, void*, size_t*)', func_addr: addr
     end
 
     cl_mem_ext_host_ptr = struct(["cl_uint  allocation_type",
