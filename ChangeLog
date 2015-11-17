@@ -1,5 +1,7 @@
 2015-11-17  vaiorabbit  <http://twitter.com/vaiorabbit>
 
+	* lib/opencl_ext.rb: Added some symbols for APPLE extensions.
+	* lib/opencl.rb (CL_STRUCT_IMAGE_FORMAT, CL_STRUCT_IMAGE_DESC): Added structs for clGetSupportedImageFormats.
 	* sample/util/clu.rb: Simple wrapper.
 
 2015-11-14  vaiorabbit  <http://twitter.com/vaiorabbit>

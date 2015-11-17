@@ -580,6 +580,42 @@ module OpenCL
   CL_PROFILING_COMMAND_START                  = 0x1282
   CL_PROFILING_COMMAND_END                    = 0x1283
 
+  # struct (from cl.h)
+
+  # struct cl_image_format
+  # - cl_channel_order        image_channel_order;
+  # - cl_channel_type         image_channel_data_type;
+  CL_STRUCT_IMAGE_FORMAT = struct(["unsigned int image_channel_order",
+                                   "unsigned int image_channel_data_type"])
+
+  # struct cl_image_desc
+  # - cl_mem_object_type      image_type;
+  # - size_t                  image_width;
+  # - size_t                  image_height;
+  # - size_t                  image_depth;
+  # - size_t                  image_array_size;
+  # - size_t                  image_row_pitch;
+  # - size_t                  image_slice_pitch;
+  # - cl_uint                 num_mip_levels;
+  # - cl_uint                 num_samples;
+  # - cl_mem                  buffer;
+  CL_STRUCT_IMAGE_DESC = struct(["unsigned int       image_type",
+                                 "size_t             image_width",
+                                 "size_t             image_height",
+                                 "size_t             image_depth",
+                                 "size_t             image_array_size",
+                                 "size_t             image_row_pitch",
+                                 "size_t             image_slice_pitch",
+                                 "unsigned int       num_mip_levels",
+                                 "unsigned int       num_samples",
+                                 "void*              buffer"])
+
+  # struct cl_buffer_region
+  # - size_t                  origin;
+  # - size_t                  size;
+  CL_BUFFER_REGION = struct(["size_t origin",
+                             "size_t size"])
+
   @@cl_import_done = false
 
   # Load native library.
@@ -1278,25 +1314,6 @@ module OpenCL
     typealias 'cl_event_info', 'cl_uint'
     typealias 'cl_command_type', 'cl_uint'
     typealias 'cl_profiling_info', 'cl_uint'
-
-    # struct (from cl.h)
-
-    cl_image_format = struct(["cl_channel_order image_channel_order",
-                              "cl_channel_type  image_channel_data_type"])
-
-    cl_image_desc = struct(["cl_mem_object_type image_type",
-                            "size_t             image_width",
-                            "size_t             image_height",
-                            "size_t             image_depth",
-                            "size_t             image_array_size",
-                            "size_t             image_row_pitch",
-                            "size_t             image_slice_pitch",
-                            "cl_uint            num_mip_levels",
-                            "cl_uint            num_samples",
-                            "cl_mem             buffer"])
-
-    cl_buffer_region = struct(["size_t origin",
-                               "size_t size"])
 
     self.import_functions_cl()
 

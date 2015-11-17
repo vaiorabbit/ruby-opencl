@@ -119,6 +119,39 @@ module OpenCL
 
   CL_MEM_ION_HOST_PTR_QCOM                  = 0x40A8
 
+  #
+  # cl_APPLE_query_kernel_names (from /OpenCL.framework/Headers/cl_ext.h)
+  #
+
+  CL_PROGRAM_NUM_KERNELS_APPLE              = 0x10000004
+  CL_PROGRAM_KERNEL_NAMES_APPLE             = 0x10000005
+
+  #
+  # cl_APPLE_fixed_alpha_channel_orders (from /OpenCL.framework/Headers/cl_ext.h)
+  #
+
+  CL_1RGB_APPLE                             = 0x10000006
+  CL_BGR1_APPLE                             = 0x10000007
+
+  #
+  # cl_APPLE_biased_fixed_point_image_formats (from /OpenCL.framework/Headers/cl_ext.h)
+  #
+
+  CL_SFIXED14_APPLE                         = 0x10000008
+  CL_BIASED_HALF_APPLE                      = 0x10000009
+
+  #
+  # YUV image support (from /OpenCL.framework/Headers/cl_ext.h)
+  #
+
+  CL_YCbYCr_APPLE                           = 0x10000010
+  CL_CbYCrY_APPLE                           = 0x10000011
+
+  #
+  # ABGR and xBGR formats for CoreImage CL-GPU support (from /OpenCL.framework/Headers/cl_ext.h)
+  #
+
+  CL_ABGR_APPLE                             = 0x10000012
 
   # cl_platform_id : platform
   def self.import_ext(platform)
