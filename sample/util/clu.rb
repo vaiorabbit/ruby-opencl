@@ -1,5 +1,4 @@
 require 'rbconfig'
-require 'objspace'
 require_relative '../../lib/opencl'
 require_relative '../../lib/opencl_ext'
 require_relative '../../lib/opencl_gl'
@@ -249,7 +248,7 @@ class CLUContext
 
     cl_ctx = OpenCL.clCreateContext(packed_properties, num_devices, devices.pack("Q*"), pfn_notify, user_data, errcode_ret_buf)
     errcode_ret = errcode_ret_buf.unpack("L")[0]
-    error_info << err if error_info != nil
+    error_info << errcode_ret if error_info != nil
 
     if errcode_ret == OpenCL::CL_SUCCESS
       @context = cl_ctx
@@ -381,7 +380,7 @@ class CLUMemory
 
     mem = OpenCL.clCreateBuffer(context, flags, size, host_ptr, errcode_ret_buf)
     errcode_ret = errcode_ret_buf.unpack("L")[0]
-    error_info << err if error_info != nil
+    error_info << errcode_ret if error_info != nil
 
     if errcode_ret == OpenCL::CL_SUCCESS
       @mem = mem
@@ -401,7 +400,7 @@ class CLUMemory
 
     mem = OpenCL.clCreateImage(context, flags, image_format, image_desc, host_ptr, errcode_ret_buf)
     errcode_ret = errcode_ret_buf.unpack("L")[0]
-    error_info << err if error_info != nil
+    error_info << errcode_ret if error_info != nil
 
     if errcode_ret == OpenCL::CL_SUCCESS
       @mem = mem
@@ -422,15 +421,96 @@ class CLUMemory
   end
 
 
-  # clGetMemObjectInfo
-  # clGetImageInfo
-  #
+  # cl_mem           : memobj
+  # cl_mem_info      : param_name
+  def getMemObjectInfo(param_name, memobj: @mem, error_info: nil)
+    # size_t          : param_value_size
+    # void *          : param_value
+    # size_t *        : param_value_size_ret
+    param_value_buf_length = 1024
+    param_value_buf = ' ' * param_value_buf_length
+    param_value_size_ret_buf = ' ' * 4
+
+    err = OpenCL.clGetMemObjectInfo(memobj, param_name, param_value_buf_length, param_value_buf, param_value_size_ret_buf)
+    error_info << err if error_info != nil
+
+    param_value_size_ret = param_value_size_ret_buf.unpack("L")[0]
+
+    unpack_format = @@mem_objinfo_param2unpack[param_name]
+    case unpack_format
+    when "void*" # param_name == OpenCL::CL_MEM_HOST_PTR
+      addr = param_value_buf.unpack("Q")[0]
+      # OS X (El Capitan) : Quering CL_MEM_HOST_PTR to memobj created without
+      # CL_MEM_USE_HOST_PTR does not return NULL, but keeps param_value_buf untouched.
+      if addr == 0 || param_value_buf[0, 8] == '        '
+        return nil
+      else
+        return Fiddle::Pointer.new(addr)
+      end
+    else
+      return param_value_buf.unpack(unpack_format)[0]
+    end
+  end
+
+  @@mem_objinfo_param2unpack = {
+    OpenCL::CL_MEM_TYPE => "L",
+    OpenCL::CL_MEM_FLAGS => "Q",
+    OpenCL::CL_MEM_SIZE => "Q",
+    OpenCL::CL_MEM_HOST_PTR => "void*",
+    OpenCL::CL_MEM_MAP_COUNT => "L",
+    OpenCL::CL_MEM_REFERENCE_COUNT => "L",
+    OpenCL::CL_MEM_CONTEXT => "Q",
+    OpenCL::CL_MEM_ASSOCIATED_MEMOBJECT => "Q",
+    OpenCL::CL_MEM_OFFSET => "Q",
+  }
+
+  # cl_mem           : memobj
+  # cl_image_info    : param_name
+  def getImageInfo(param_name, memobj: @mem, error_info: nil)
+    # size_t          : param_value_size
+    # void *          : param_value
+    # size_t *        : param_value_size_ret
+    param_value_buf_length = 1024
+    param_value_buf = ' ' * param_value_buf_length
+    param_value_size_ret_buf = ' ' * 4
+
+    err = OpenCL.clGetImageInfo(memobj, param_name, param_value_buf_length, param_value_buf, param_value_size_ret_buf)
+    error_info << err if error_info != nil
+
+    param_value_size_ret = param_value_size_ret_buf.unpack("L")[0]
+
+    unpack_format = @@mem_imageinfo_param2unpack[param_name]
+    case unpack_format
+    when "cl_image_format" # param_name == OpenCL::CL_IMAGE_FORMAT
+      values = param_value_buf.unpack("L2") # instance of cl_image_format
+      fmt = OpenCL::CL_STRUCT_IMAGE_FORMAT.malloc
+      fmt.image_channel_order = values[0]
+      fmt.image_channel_data_type = values[1]
+      return fmt
+    else
+      return param_value_buf.unpack(unpack_format)[0]
+    end
+  end
+
+  @@mem_imageinfo_param2unpack = {
+    OpenCL::CL_IMAGE_FORMAT => "cl_image_format",
+    OpenCL::CL_IMAGE_ELEMENT_SIZE => "Q",
+    OpenCL::CL_IMAGE_ROW_PITCH => "Q",
+    OpenCL::CL_IMAGE_SLICE_PITCH => "Q",
+    OpenCL::CL_IMAGE_WIDTH => "Q",
+    OpenCL::CL_IMAGE_HEIGHT => "Q",
+    OpenCL::CL_IMAGE_DEPTH => "Q",
+    OpenCL::CL_IMAGE_ARRAY_SIZE => "Q",
+    OpenCL::CL_IMAGE_BUFFER => "Q",
+    OpenCL::CL_IMAGE_NUM_MIP_LEVELS => "L",
+    OpenCL::CL_IMAGE_NUM_SAMPLES => "L",
+  }
 end
 
 ################################################################################
 
 class CLUCommandQueue
-  attr_reader :command_queue
+  attr_reader :command_queue # cl_command_queue
 
   def initialize
     @command_queue = nil # cl_command_queue
@@ -444,7 +524,7 @@ class CLUCommandQueue
 
     cl_cq = OpenCL.clCreateCommandQueue(context, device, properties, errcode_ret_buf)
     errcode_ret = errcode_ret_buf.unpack("L")[0]
-    error_info << err if error_info != nil
+    error_info << errcode_ret if error_info != nil
 
     if errcode_ret == OpenCL::CL_SUCCESS
       @command_queue = cl_cq
@@ -499,6 +579,23 @@ class CLUCommandQueue
     OpenCL::CL_QUEUE_REFERENCE_COUNT => "L",
     OpenCL::CL_QUEUE_PROPERTIES => "L",
   }
+
+  # clEnqueueReadBuffer
+  # clEnqueueWriteBuffer
+  # clEnqueueFillBuffer
+  # clEnqueueCopyBuffer
+  # clEnqueueReadImage
+  # clEnqueueWriteImage
+  # clEnqueueFillImage
+  # clEnqueueCopyImage
+  # clEnqueueCopyImageToBuffer
+  # clEnqueueCopyBufferToImage
+  # clEnqueueMapBuffer
+  # clEnqueueMapImage
+  # clEnqueueUnmapMemObject
+  # clEnqueueNDRangeKernel
+  # clEnqueueTask
+
 end
 
 ################################################################################
@@ -522,7 +619,7 @@ class CLUProgram
 
     program = OpenCL.clCreateProgramWithSource(context, count, strings.pack("p*"), lengthes.pack("Q*"), errcode_ret_buf)
     errcode_ret = errcode_ret_buf.unpack("L")[0]
-    error_info << err if error_info != nil
+    error_info << errcode_ret if error_info != nil
 
     if errcode_ret == OpenCL::CL_SUCCESS
       @program = program
@@ -568,7 +665,7 @@ end
 ################################################################################
 
 class CLUKernel
-  attr_reader :kernel, :name
+  attr_reader :kernel, :name # cl_kernel and the name of '__kernel' entry point
 
   def initialize
     @kernel = nil
@@ -581,7 +678,7 @@ class CLUKernel
     errcode_ret_buf = ' ' * 4
     kernel = OpenCL.clCreateKernel(program, kernel_name, errcode_ret_buf)
     errcode_ret = errcode_ret_buf.unpack("L")[0]
-    error_info << err if error_info != nil
+    error_info << errcode_ret if error_info != nil
 
     if errcode_ret == OpenCL::CL_SUCCESS
       @kernel = kernel
