@@ -989,7 +989,7 @@ module OpenCL
     # void *              : ptr
     # cl_uint             : num_events_in_wait_list
     # const cl_event *    : event_wait_list
-    # cl_event *          : eventc
+    # cl_event *          : event
     extern 'cl_int clEnqueueReadBuffer(cl_command_queue, cl_mem, cl_bool, size_t, size_t, void *, cl_uint, const cl_event *, cl_event *)'
 
     # cl_command_queue    : command_queue
