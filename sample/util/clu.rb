@@ -618,9 +618,46 @@ class CLUCommandQueue
     return err
   end
 
+  # cl_command_queue   : command_queue
+  # cl_mem             : buffer
+  # const void *       : pattern
+  # size_t             : offset
+  # size_t             : size
+  # const cl_event *   : event_wait_list
+  # cl_event *         : event
+  def enqueueFillBuffer(buffer, pattern, offset, size, command_queue: @command_queue, event_wait_list: nil, event: nil, error_info: nil)
+    event_buf = event == nil ? nil : ' ' * 8
+    num_events_in_wait_list = event_wait_list == nil ? 0 : event_wait_list.length
+    # size_t             : pattern_size
+    pattern_size = pattern.size
 
-  # clEnqueueFillBuffer
-  # clEnqueueCopyBuffer
+    err = OpenCL.clEnqueueFillBuffer(command_queue, buffer, pattern, pattern_size, offset, size, num_events_in_wait_list, event_wait_list == nil ? nil : event_wait_list.pack("Q"), event_buf)
+    error_info << err if error_info != nil
+
+    event << event_buf.unpack("Q")[0] if event != nil
+    return err
+  end
+
+
+  # cl_command_queue   : command_queue
+  # cl_mem             : src_buffer
+  # cl_mem             : dst_buffer
+  # size_t             : src_offset
+  # size_t             : dst_offset
+  # size_t             : size
+  # const cl_event *   : event_wait_list
+  # cl_event *         : event
+  def enqueueCopyBuffer(src_buffer, dst_buffer, src_offset, dst_offset, size, command_queue: @command_queue, event_wait_list: nil, event: nil, error_info: nil)
+    event_buf = event == nil ? nil : ' ' * 8
+    num_events_in_wait_list = event_wait_list == nil ? 0 : event_wait_list.length
+
+    err = OpenCL.clEnqueueCopyBuffer(command_queue, src_buffer, dst_buffer, src_offset, dst_offset, size, num_events_in_wait_list, event_wait_list == nil ? nil : event_wait_list.pack("Q"), event_buf)
+    error_info << err if error_info != nil
+
+    event << event_buf.unpack("Q")[0] if event != nil
+    return err
+  end
+
   # clEnqueueReadImage
   # clEnqueueWriteImage
   # clEnqueueFillImage
