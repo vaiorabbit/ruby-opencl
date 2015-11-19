@@ -658,8 +658,49 @@ class CLUCommandQueue
     return err
   end
 
-  # clEnqueueReadImage
-  # clEnqueueWriteImage
+  # cl_command_queue     : command_queue
+  # cl_mem               : image
+  # cl_bool              : blocking_read
+  # const size_t *       : origin[3]
+  # const size_t *       : region[3]
+  # size_t               : row_pitch
+  # size_t               : slice_pitch
+  # void *               : ptr
+  # const cl_event *     : event_wait_list
+  # cl_event *           : event
+  def enqueueReadImage(image, blocking_read, origin, region, row_pitch, slice_pitch, ptr, command_queue: @command_queue, event_wait_list: nil, event: nil, error_info: nil)
+    event_buf = event == nil ? nil : ' ' * 8
+    num_events_in_wait_list = event_wait_list == nil ? 0 : event_wait_list.length
+
+    err = OpenCL.clEnqueueReadImage(command_queue, image, blocking_read, origin.pack("Q3"), region.pack("Q3"), row_pitch, slice_pitch, ptr, num_events_in_wait_list, event_wait_list == nil ? nil : event_wait_list.pack("Q"), event_buf)
+    error_info << err if error_info != nil
+
+    event << event_buf.unpack("Q")[0] if event != nil
+    return err
+  end
+
+  # cl_command_queue     : command_queue
+  # cl_mem               : image
+  # cl_bool              : blocking_write
+  # const size_t *       : origin[3]
+  # const size_t *       : region[3]
+  # size_t               : row_pitch
+  # size_t               : slice_pitch
+  # void *               : ptr
+  # const cl_event *     : event_wait_list
+  # cl_event *           : event
+  def enqueueWriteImage(image, blocking_write, origin, region, row_pitch, slice_pitch, ptr, command_queue: @command_queue, event_wait_list: nil, event: nil, error_info: nil)
+    event_buf = event == nil ? nil : ' ' * 8
+    num_events_in_wait_list = event_wait_list == nil ? 0 : event_wait_list.length
+
+    err = OpenCL.clEnqueueWriteImage(command_queue, image, blocking_write, origin.pack("Q3"), region.pack("Q3"), row_pitch, slice_pitch, ptr, num_events_in_wait_list, event_wait_list == nil ? nil : event_wait_list.pack("Q"), event_buf)
+    error_info << err if error_info != nil
+
+    event << event_buf.unpack("Q")[0] if event != nil
+    return err
+  end
+
+
   # clEnqueueFillImage
   # clEnqueueCopyImage
   # clEnqueueCopyImageToBuffer
