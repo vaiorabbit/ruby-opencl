@@ -416,7 +416,7 @@ class CLUMemory
   def createFromGLBuffer(context, flags, bufobj, error_info: nil)
     errcode_ret_buf = ' ' * 4
 
-    mem = OpenCL.clCreateFromGLBuffer(context, flags, target, bufobj, errcode_ret_buf)
+    mem = OpenCL.clCreateFromGLBuffer(context, flags, bufobj, errcode_ret_buf)
     errcode_ret = errcode_ret_buf.unpack("l")[0]
     error_info << errcode_ret if error_info != nil
 
@@ -899,8 +899,9 @@ class CLUCommandQueue
     num_events_in_wait_list = event_wait_list == nil ? 0 : event_wait_list.length
 
     global_work_offset_buf = global_work_offset == nil ? nil : global_work_offset.pack("Q*")
+    local_work_size_buf = local_work_size == nil ? nil : local_work_size..pack("Q*")
 
-    err = OpenCL.clEnqueueNDRangeKernel(command_queue, kernel, work_dim, global_work_offset_buf, global_work_size.pack("Q*"), local_work_size.pack("Q*"), num_events_in_wait_list, event_wait_list == nil ? nil : event_wait_list.pack("Q"), event_buf)
+    err = OpenCL.clEnqueueNDRangeKernel(command_queue, kernel, work_dim, global_work_offset_buf, global_work_size.pack("Q*"), local_work_size_buf, num_events_in_wait_list, event_wait_list == nil ? nil : event_wait_list.pack("Q"), event_buf)
     error_info << err if error_info != nil
 
     event << event_buf.unpack("Q")[0] if event != nil
