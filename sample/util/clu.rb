@@ -247,7 +247,7 @@ class CLUContext
     errcode_ret_buf = ' ' * 4
 
     cl_ctx = OpenCL.clCreateContext(packed_properties, num_devices, devices.pack("Q*"), pfn_notify, user_data, errcode_ret_buf)
-    errcode_ret = errcode_ret_buf.unpack("L")[0]
+    errcode_ret = errcode_ret_buf.unpack("l")[0]
     error_info << errcode_ret if error_info != nil
 
     if errcode_ret == OpenCL::CL_SUCCESS
@@ -379,7 +379,7 @@ class CLUMemory
     errcode_ret_buf = ' ' * 4
 
     mem = OpenCL.clCreateBuffer(context, flags, size, host_ptr, errcode_ret_buf)
-    errcode_ret = errcode_ret_buf.unpack("L")[0]
+    errcode_ret = errcode_ret_buf.unpack("l")[0]
     error_info << errcode_ret if error_info != nil
 
     if errcode_ret == OpenCL::CL_SUCCESS
@@ -399,7 +399,45 @@ class CLUMemory
     errcode_ret_buf = ' ' * 4
 
     mem = OpenCL.clCreateImage(context, flags, image_format, image_desc, host_ptr, errcode_ret_buf)
-    errcode_ret = errcode_ret_buf.unpack("L")[0]
+    errcode_ret = errcode_ret_buf.unpack("l")[0]
+    error_info << errcode_ret if error_info != nil
+
+    if errcode_ret == OpenCL::CL_SUCCESS
+      @mem = mem
+      return @mem
+    else
+      return nil
+    end
+  end
+
+  # cl_context     : context
+  # cl_mem_flags   : flags
+  # cl_GLuint      : bufobj
+  def createFromGLBuffer(context, flags, bufobj, error_info: nil)
+    errcode_ret_buf = ' ' * 4
+
+    mem = OpenCL.clCreateFromGLBuffer(context, flags, target, bufobj, errcode_ret_buf)
+    errcode_ret = errcode_ret_buf.unpack("l")[0]
+    error_info << errcode_ret if error_info != nil
+
+    if errcode_ret == OpenCL::CL_SUCCESS
+      @mem = mem
+      return @mem
+    else
+      return nil
+    end
+  end
+
+  # cl_context      : context
+  # cl_mem_flags    : flags
+  # cl_GLenum       : target
+  # cl_GLint        : miplevel
+  # cl_GLuint       : texture
+  def createFromGLTexture(context, flags, target, miplevel, texture, error_info: nil)
+    errcode_ret_buf = ' ' * 4
+
+    mem = OpenCL.clCreateFromGLTexture(context, flags, target, miplevel, texture, errcode_ret_buf)
+    errcode_ret = errcode_ret_buf.unpack("l")[0]
     error_info << errcode_ret if error_info != nil
 
     if errcode_ret == OpenCL::CL_SUCCESS
@@ -523,7 +561,7 @@ class CLUCommandQueue
     errcode_ret_buf = ' ' * 4
 
     cl_cq = OpenCL.clCreateCommandQueue(context, device, properties, errcode_ret_buf)
-    errcode_ret = errcode_ret_buf.unpack("L")[0]
+    errcode_ret = errcode_ret_buf.unpack("l")[0]
     error_info << errcode_ret if error_info != nil
 
     if errcode_ret == OpenCL::CL_SUCCESS
@@ -700,17 +738,219 @@ class CLUCommandQueue
     return err
   end
 
+  # cl_command_queue   : command_queue
+  # cl_mem             : image
+  # const void *       : fill_color
+  # const size_t *     : origin[3]
+  # const size_t *     : region[3]
+  # const cl_event *   : event_wait_list
+  # cl_event *         : event
+  def enqueueFillImage(image, fill_color, origin, region, command_queue: @command_queue, event_wait_list: nil, event: nil, error_info: nil)
+    event_buf = event == nil ? nil : ' ' * 8
+    num_events_in_wait_list = event_wait_list == nil ? 0 : event_wait_list.length
 
-  # clEnqueueFillImage
-  # clEnqueueCopyImage
-  # clEnqueueCopyImageToBuffer
-  # clEnqueueCopyBufferToImage
-  # clEnqueueMapBuffer
-  # clEnqueueMapImage
-  # clEnqueueUnmapMemObject
-  # clEnqueueNDRangeKernel
-  # clEnqueueTask
+    err = OpenCL.clEnqueueFillImage(command_queue, image, fill_color, origin.pack("Q3"), region.pack("Q3"), num_events_in_wait_list, event_wait_list == nil ? nil : event_wait_list.pack("Q"), event_buf)
+    error_info << err if error_info != nil
 
+    event << event_buf.unpack("Q")[0] if event != nil
+    return err
+  end
+
+  # cl_command_queue     : command_queue
+  # cl_mem               : src_image
+  # cl_mem               : dst_image
+  # const size_t *       : src_origin[3]
+  # const size_t *       : dst_origin[3]
+  # const size_t *       : region[3]
+  # const cl_event *     : event_wait_list
+  # cl_event *           : event
+  def enqueueCopyImage(src_image, dst_image, src_origin, dst_origin, region, command_queue: @command_queue, event_wait_list: nil, event: nil, error_info: nil)
+    event_buf = event == nil ? nil : ' ' * 8
+    num_events_in_wait_list = event_wait_list == nil ? 0 : event_wait_list.length
+
+    err = OpenCL.clEnqueueCopyImage(command_queue, src_image, dst_image, src_origin.pack("Q3"), dst_origin.pack("Q3"), region.pack("Q3"), num_events_in_wait_list, event_wait_list == nil ? nil : event_wait_list.pack("Q"), event_buf)
+    error_info << err if error_info != nil
+
+    event << event_buf.unpack("Q")[0] if event != nil
+    return err
+  end
+
+  # cl_command_queue : command_queue
+  # cl_mem           : src_image
+  # cl_mem           : dst_buffer
+  # const size_t *   : src_origin[3]
+  # const size_t *   : region[3]
+  # size_t           : dst_offset
+  # const cl_event * : event_wait_list
+  # cl_event *       : event
+  def enqueueCopyImageToBuffer(src_image, dst_buffer, src_origin, region, dst_offset, command_queue: @command_queue, event_wait_list: nil, event: nil, error_info: nil)
+    event_buf = event == nil ? nil : ' ' * 8
+    num_events_in_wait_list = event_wait_list == nil ? 0 : event_wait_list.length
+
+    err = OpenCL.clEnqueueCopyImageToBuffer(command_queue, src_image, dst_buffer, src_origin.pack("Q3"), region.pack("Q3"), dst_offset, num_events_in_wait_list, event_wait_list == nil ? nil : event_wait_list.pack("Q"), event_buf)
+    error_info << err if error_info != nil
+
+    event << event_buf.unpack("Q")[0] if event != nil
+    return err
+  end
+
+  # cl_command_queue : command_queue
+  # cl_mem           : src_buffer
+  # cl_mem           : dst_image
+  # size_t           : src_offset
+  # const size_t *   : dst_origin[3]
+  # const size_t *   : region[3]
+  # const cl_event * : event_wait_list
+  # cl_event *       : event
+  def enqueueCopyBufferToImage(src_buffer, dst_image, src_offset, dst_origin, region, command_queue: @command_queue, event_wait_list: nil, event: nil, error_info: nil)
+    event_buf = event == nil ? nil : ' ' * 8
+    num_events_in_wait_list = event_wait_list == nil ? 0 : event_wait_list.length
+
+    err = OpenCL.clEnqueueCopyBufferToImage(command_queue, src_buffer, dst_image, src_offset, dst_origin.pack("Q3"), region.pack("Q3"), num_events_in_wait_list, event_wait_list == nil ? nil : event_wait_list.pack("Q"), event_buf)
+    error_info << err if error_info != nil
+
+    event << event_buf.unpack("Q")[0] if event != nil
+    return err
+  end
+
+
+  # cl_command_queue : command_queue
+  # cl_mem           : buffer
+  # cl_bool          : blocking_map
+  # cl_map_flags     : map_flags
+  # size_t           : offset
+  # size_t           : size
+  # const cl_event * : event_wait_list
+  # cl_event *       : event
+  def enqueueMapBuffer(buffer, blocking_map, map_flags, offset, size, command_queue: @command_queue, event_wait_list: nil, event: nil, error_info: nil)
+    event_buf = event == nil ? nil : ' ' * 8
+    num_events_in_wait_list = event_wait_list == nil ? 0 : event_wait_list.length
+    errcode_ret_buf = ' ' * 4
+
+    mapped_ptr = OpenCL.clEnqueueMapBuffer(command_queue, buffer, blocking_map, map_flags, offset, size, num_events_in_wait_list, event_wait_list == nil ? nil : event_wait_list.pack("Q"), event_buf, errcode_ret_buf)
+    errcode_ret = errcode_ret_buf.unpack("l")[0]
+    error_info << errcode_ret if error_info != nil
+
+    event << event_buf.unpack("Q")[0] if event != nil
+    if errcode_ret == OpenCL::CL_SUCCESS
+      return mapped_ptr
+    else
+      return nil
+    end
+  end
+
+  # cl_command_queue  : command_queue
+  # cl_mem            : image
+  # cl_bool           : blocking_map
+  # cl_map_flags      : map_flags
+  # const size_t *    : origin[3]
+  # const size_t *    : region[3]
+  # const cl_event *  : event_wait_list
+  # cl_event *        : event
+  def enqueueMapImage(buffer, blocking_map, map_flags, origin, region, command_queue: @command_queue, event_wait_list: nil, event: nil, error_info: nil)
+    event_buf = event == nil ? nil : ' ' * 8
+    num_events_in_wait_list = event_wait_list == nil ? 0 : event_wait_list.length
+    errcode_ret_buf = ' ' * 4
+
+    image_row_pitch_buf = ' ' * 8
+    image_slice_pitch_buf = ' ' * 8
+
+    mapped_ptr = OpenCL.clEnqueueMapImage(command_queue, buffer, blocking_map, map_flags, origin.pack("Q3"), region.pack("Q3"), image_row_pitch_buf, image_slice_pitch_buf, num_events_in_wait_list, event_wait_list == nil ? nil : event_wait_list.pack("Q"), event_buf, errcode_ret_buf)
+    errcode_ret = errcode_ret_buf.unpack("l")[0]
+    error_info << errcode_ret if error_info != nil
+
+    image_row_pitch = image_row_pitch_buf.unpack("Q")[0]
+    image_slice_pitch = image_slice_pitch_buf.unpack("Q")[0]
+
+    event << event_buf.unpack("Q")[0] if event != nil
+    if errcode_ret == OpenCL::CL_SUCCESS
+      return mapped_ptr, image_row_pitch, image_slice_pitch
+    else
+      return nil, image_row_pitch, image_slice_pitch
+    end
+  end
+
+  # cl_command_queue : command_queue
+  # cl_mem           : memobj
+  # void *           : mapped_ptr
+  # const cl_event * : event_wait_list
+  # cl_event *       : event
+  def enqueueUnmapMemObject(memobj, mapped_ptr, command_queue: @command_queue, event_wait_list: nil, event: nil, error_info: nil)
+    event_buf = event == nil ? nil : ' ' * 8
+    num_events_in_wait_list = event_wait_list == nil ? 0 : event_wait_list.length
+
+    err = OpenCL.clEnqueueUnmapMemObject(command_queue, memobj, mapped_ptr, num_events_in_wait_list, event_wait_list == nil ? nil : event_wait_list.pack("Q"), event_buf)
+    error_info << err if error_info != nil
+
+    event << event_buf.unpack("Q")[0] if event != nil
+    return err
+  end
+
+  # cl_command_queue : command_queue
+  # cl_kernel        : kernel
+  # cl_uint          : work_dim
+  # const size_t *   : global_work_offset
+  # const size_t *   : global_work_size
+  # const size_t *   : local_work_size
+  # const cl_event * : event_wait_list
+  # cl_event *       : event
+  def enqueueNDRangeKernel(kernel, work_dim, global_work_offset, global_work_size, local_work_size, command_queue: @command_queue, event_wait_list: nil, event: nil, error_info: nil)
+    event_buf = event == nil ? nil : ' ' * 8
+    num_events_in_wait_list = event_wait_list == nil ? 0 : event_wait_list.length
+
+    global_work_offset_buf = global_work_offset == nil ? nil : global_work_offset.pack("Q*")
+
+    err = OpenCL.clEnqueueNDRangeKernel(command_queue, kernel, work_dim, global_work_offset_buf, global_work_size.pack("Q*"), local_work_size.pack("Q*"), num_events_in_wait_list, event_wait_list == nil ? nil : event_wait_list.pack("Q"), event_buf)
+    error_info << err if error_info != nil
+
+    event << event_buf.unpack("Q")[0] if event != nil
+    return err
+  end
+
+  # cl_command_queue  : command_queue
+  # cl_kernel         : kernel
+  # const cl_event *  : event_wait_list
+  # cl_event *        : event
+  def enqueueTask(kernel, command_queue: @command_queue, event_wait_list: nil, event: nil, error_info: nil)
+    event_buf = event == nil ? nil : ' ' * 8
+    num_events_in_wait_list = event_wait_list == nil ? 0 : event_wait_list.length
+
+    err = OpenCL.clEnqueueTask(command_queue, kernel, num_events_in_wait_list, event_wait_list == nil ? nil : event_wait_list.pack("Q"), event_buf)
+    error_info << err if error_info != nil
+
+    event << event_buf.unpack("Q")[0] if event != nil
+    return err
+  end
+
+  # cl_command_queue      : command_queue
+  # const cl_mem *        : mem_objects
+  # const cl_event *      : event_wait_list
+  # cl_event *            : event
+  def enqueueAcquireGLObjects(mem_objects, command_queue: @command_queue, event_wait_list: nil, event: nil, error_info: nil)
+    event_buf = event == nil ? nil : ' ' * 8
+    num_events_in_wait_list = event_wait_list == nil ? 0 : event_wait_list.length
+
+    err = OpenCL.clEnqueueAcquireGLObjects(command_queue, mem_objects.length, mem_objects.pack("Q*"), num_events_in_wait_list, event_wait_list == nil ? nil : event_wait_list.pack("Q"), event_buf)
+    error_info << err if error_info != nil
+
+    event << event_buf.unpack("Q")[0] if event != nil
+    return err
+  end
+
+  # cl_command_queue      : command_queue
+  # const cl_mem *        : mem_objects
+  # const cl_event *      : event_wait_list
+  # cl_event *            : event
+  def enqueueReleaseGLObjects(mem_objects, command_queue: @command_queue, event_wait_list: nil, event: nil, error_info: nil)
+    event_buf = event == nil ? nil : ' ' * 8
+    num_events_in_wait_list = event_wait_list == nil ? 0 : event_wait_list.length
+
+    err = OpenCL.clEnqueueReleaseGLObjects(command_queue, mem_objects.length, mem_objects.pack("Q*"), num_events_in_wait_list, event_wait_list == nil ? nil : event_wait_list.pack("Q"), event_buf)
+    error_info << err if error_info != nil
+
+    event << event_buf.unpack("Q")[0] if event != nil
+    return err
+  end
 end
 
 ################################################################################
@@ -733,7 +973,7 @@ class CLUProgram
     lengthes = strings.collect {|src| src.length}
 
     program = OpenCL.clCreateProgramWithSource(context, count, strings.pack("p*"), lengthes.pack("Q*"), errcode_ret_buf)
-    errcode_ret = errcode_ret_buf.unpack("L")[0]
+    errcode_ret = errcode_ret_buf.unpack("l")[0]
     error_info << errcode_ret if error_info != nil
 
     if errcode_ret == OpenCL::CL_SUCCESS
@@ -792,7 +1032,7 @@ class CLUKernel
   def createKernel(program, kernel_name, error_info: nil)
     errcode_ret_buf = ' ' * 4
     kernel = OpenCL.clCreateKernel(program, kernel_name, errcode_ret_buf)
-    errcode_ret = errcode_ret_buf.unpack("L")[0]
+    errcode_ret = errcode_ret_buf.unpack("l")[0]
     error_info << errcode_ret if error_info != nil
 
     if errcode_ret == OpenCL::CL_SUCCESS
@@ -1077,7 +1317,6 @@ class CLU
   def self.getImageFormatString(image_channel)
     return @@image_format.has_key?(image_channel) ? @@image_format[image_channel] : image_channel.to_s
   end
-
 end
 
 ################################################################################
