@@ -3,8 +3,11 @@ require '../util/setup_glfw'
 require '../util/clu'
 
 # Load DLL
-OpenCL.load_lib('/System/Library/Frameworks/OpenCL.framework/OpenCL') # For Mac OS X
-# OpenCL.load_lib('c:/Windows/System32/OpenCL.dll') # For Windows
+begin
+  OpenCL.load_lib('c:/Windows/System32/OpenCL.dll') # For Windows
+rescue
+  OpenCL.load_lib('/System/Library/Frameworks/OpenCL.framework/OpenCL') # For Mac OS X
+end
 include OpenCL
 
 $width = 512

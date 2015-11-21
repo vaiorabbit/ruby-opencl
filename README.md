@@ -20,6 +20,45 @@ A Ruby binding for OpenCL 1.2
 	*   See 'createContextWithGLInterop (sample/util/clu.rb)' for details.
 
 
+## Prerequisites ##
+
+*   Fiddle
+	*   A libffi wrapper
+	*   Standard library since Ruby 2.0.0
+	*   I recommend you to use Ruby 2.1.2 and later, which fixed Fiddle's memory leak issue (https://bugs.ruby-lang.org/issues/9599).
+
+### For sample ###
+
+Use GLFW or GLUT for creating windows and OpenGL rendering contexts.
+
+*   GLFW
+    *   http://www.glfw.org/
+    *   http://www.glfw.org/download.html
+
+*   freeglut
+    *   http://freeglut.sourceforge.net
+    *   http://freeglut.sourceforge.net/index.php#download
+
+
+## Installation ##
+
+Via RubyGems ( https://rubygems.org/gems/opencl-bindings ):
+
+    $ gem install opencl-bindings
+
+Or grab all library codes (`lib/*.rb') and use them by adding as one of the load paths like:
+
+    $ ruby -I ./lib your_app.rb
+
+
+## How to use ##
+
+See sample/hello.rb.
+
+To get more samples, please visit:
+https://github.com/vaiorabbit/ruby-opencl
+
+
 ## License ##
 
 The zlib/libpng License ( http://opensource.org/licenses/Zlib ).
