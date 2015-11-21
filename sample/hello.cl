@@ -1,5 +1,5 @@
 #pragma OPENCL EXTENSION cl_khr_byte_addressable_store : enable
-
+/* Ref.: http://www.fixstars.com/en/opencl/book/sample/ */
 __kernel void hello(__global char* string)
 {
    string[0] = 'H';

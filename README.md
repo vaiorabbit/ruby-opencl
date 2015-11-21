@@ -2,14 +2,23 @@
 
 # Yet another OpenCL wrapper for Ruby #
 
+A Ruby binding for OpenCL 1.2
+
 *   Created : 2015-10-25
 *   Last modified : 2015-11-21
 
 
 ## Features ##
 
-*   Uses Fiddle (One of the Ruby standard libraries that wraps libffi)
+*   Based on Fiddle (One of the Ruby standard libraries that wraps libffi)
 	*   You don't need to build C extension library
+
+*   Interoperability with OpenGL
+	*   My OpenGL gem (opengl-bindings ( https://github.com/vaiorabbit/ruby-opengl ) version 1.5.2 and later) provides some platform-specific APIs essential for context sharing.
+	*   'opengl-bindings' is also based on Fiddle.
+	*   Supported Platforms: Windows, Mac OS X and Linux (X Window)
+	*   See 'createContextWithGLInterop (sample/util/clu.rb)' for details.
+
 
 ## License ##
 

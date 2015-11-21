@@ -268,7 +268,14 @@ class CLUContext
     end
   end
 
+  def self.newContext(properties, devices, pfn_notify: nil, user_data: nil, error_info: nil)
+    obj = CLUContext.new
+    ret = obj.createContext(properties, devices, pfn_notify: pfn_notify, user_data: user_data, error_info: error_info)
+    return ret == nil ? nil : obj
+  end
+
   # Prerequisite : opengl-bindings 1.5.2 or later ( https://github.com/vaiorabbit/ruby-opengl )
+  # You need to "require 'opengl'" before using this method.
   def createContextWithGLInterop(properties, devices, platform, pfn_notify: nil, user_data: nil, error_info: nil)
 
     properties.pop if properties.last == 0
@@ -308,6 +315,12 @@ class CLUContext
     end
 
     return createContext(properties, devices, pfn_notify: pfn_notify, user_data: user_data, error_info: error_info)
+  end
+
+  def self.newContextWithGLInterop(properties, devices, platform, pfn_notify: nil, user_data: nil, error_info: nil)
+    obj = CLUContext.new
+    ret = obj.createContextWithGLInterop(properties, devices, platform, pfn_notify: pfn_notify, user_data: user_data, error_info: error_info)
+    return ret == nil ? nil : obj
   end
 
   # cl_context : context
@@ -400,6 +413,12 @@ class CLUMemory
     end
   end
 
+  def self.newBuffer(context, flags, size, host_ptr = nil, error_info: nil)
+    obj = CLUMemory.new
+    ret = obj.createBuffer(context, flags, size, host_ptr, error_info: error_info)
+    return ret == nil ? nil : obj
+  end
+
   # cl_context              : context
   # cl_mem_flags            : flags
   # const cl_image_format * : image_format
@@ -420,6 +439,12 @@ class CLUMemory
     end
   end
 
+  def self.newImage(context, flags, image_format, image_desc, host_ptr = nil, error_info: nil)
+    obj = CLUMemory.new
+    ret = obj.createImage(context, flags, image_format, image_desc, host_ptr, error_info: error_info)
+    return ret == nil ? nil : obj
+  end
+
   # cl_context     : context
   # cl_mem_flags   : flags
   # cl_GLuint      : bufobj
@@ -436,6 +461,12 @@ class CLUMemory
     else
       return nil
     end
+  end
+
+  def self.newFromGLBuffer(context, flags, bufobj, error_info: nil)
+    obj = CLUMemory.new
+    ret = obj.createFromGLBuffer(context, flags, bufobj, error_info: error_info)
+    return ret == nil ? nil : obj
   end
 
   # cl_context      : context
@@ -458,6 +489,12 @@ class CLUMemory
     end
   end
 
+  def self.newFromGLTexture(context, flags, target, miplevel, texture, error_info: nil)
+    obj = CLUMemory.new
+    ret = obj.createFromGLTexture(context, flags, target, miplevel, texture, error_info: error_info)
+    return ret == nil ? nil : obj
+  end
+
   # cl_context   : context
   # cl_mem_flags : flags
   # cl_GLuint    : renderbuffer
@@ -474,6 +511,12 @@ class CLUMemory
     else
       return nil
     end
+  end
+
+  def self.newFromGLRenderBuffer(context, flags, renderbuffer, error_info: nil)
+    obj = CLUMemory.new
+    ret = obj.createFromGLRenderBuffer(context, flags, renderbuffer, error_info: error_info)
+    return ret == nil ? nil : obj
   end
 
   # cl_mem : mem
@@ -634,6 +677,12 @@ class CLUCommandQueue
     else
       return nil
     end
+  end
+
+  def self.newCommandQueue(context, device, properties = 0, error_info: nil)
+    obj = CLUCommandQueue.new
+    ret = obj.createCommandQueue(context, device, 0, error_info: error_info)
+    return ret == nil ? nil : obj
   end
 
   # cl_command_queue : command_queue
@@ -1047,6 +1096,12 @@ class CLUProgram
     end
   end
 
+  def self.newProgramWithSource(context, strings, error_info: nil)
+    obj = CLUProgram.new
+    ret = obj.createProgramWithSource(context, strings, error_info: error_info)
+    return ret == nil ? nil : obj
+  end
+
   # cl_program : program
   def retainProgram(program: @program)
     return OpenCL.clRetainProgram(program)
@@ -1105,6 +1160,12 @@ class CLUKernel
     else
       return nil
     end
+  end
+
+  def self.newKernel(program, kernel_name, error_info: nil)
+    obj = CLUKernel.new
+    ret = obj.createKernel(program, kernel_name, error_info: error_info)
+    return ret == nil ? nil : obj
   end
 
   # cl_kernel       : kernel

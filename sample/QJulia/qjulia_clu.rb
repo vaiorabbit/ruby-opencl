@@ -22,12 +22,12 @@ $mu_C  = [ -0.278, -0.479, -0.231, 0.235 ]
 
 $gl_tex_id = nil
 
-$clu_ctx = CLUContext.new
-$clu_cq = CLUCommandQueue.new
-$clu_prog = CLUProgram.new
-$clu_kern = CLUKernel.new
-$clu_image_memobj = CLUMemory.new
-$clu_result_memobj = CLUMemory.new
+$clu_ctx = nil
+$clu_cq = nil
+$clu_prog = nil
+$clu_kern = nil
+$clu_image_memobj = nil
+$clu_result_memobj = nil
 $max_workgroup_size = nil
 $workgroup_size = [nil, nil]
 $workgroup_items = 32
@@ -194,23 +194,23 @@ def init_cl()
   abort("Qjulia requires images: Images not supported on this device.") if image_support == CL_FALSE
 
   # Context
-  $clu_ctx.createContextWithGLInterop([CL_CONTEXT_PLATFORM, clu_platform.platforms[0], 0], clu_device.devices, clu_platform.platforms[0])
+  $clu_ctx = CLUContext.newContextWithGLInterop([CL_CONTEXT_PLATFORM, clu_platform.platforms[0], 0], clu_device.devices, clu_platform.platforms[0])
 
   # Command Queues
-  $clu_cq.createCommandQueue($clu_ctx.context, clu_device.devices[0])
+  $clu_cq = CLUCommandQueue.newCommandQueue($clu_ctx.context, clu_device.devices[0])
 
   kernel_source = "#define WIDTH (#{$width})\n#define HEIGHT (#{$height})\n" + File.read("qjulia_kernel.cl")
-  $clu_prog.createProgramWithSource($clu_ctx.context, [kernel_source])
+  $clu_prog = CLUProgram.newProgramWithSource($clu_ctx.context, [kernel_source])
   $clu_prog.buildProgram(clu_device.devices)
-  $clu_kern.createKernel($clu_prog.program, "QJuliaKernel")
+  $clu_kern = CLUKernel.newKernel($clu_prog.program, "QJuliaKernel")
 
   $max_workgroup_size = $clu_kern.getKernelWorkGroupInfo(CL_KERNEL_WORK_GROUP_SIZE, clu_device.devices[0])
 
   $workgroup_size[0] = $max_workgroup_size > 1 ? ($max_workgroup_size / $workgroup_items) : $max_workgroup_size
   $workgroup_size[1] = $max_workgroup_size / $workgroup_size[0]
 
-  $clu_image_memobj.createFromGLTexture($clu_ctx.context, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, $gl_tex_id)
-  $clu_result_memobj.createBuffer($clu_ctx.context, CL_MEM_WRITE_ONLY, Fiddle::SIZEOF_CHAR * 4 * $width * $height)
+  $clu_image_memobj = CLUMemory.newFromGLTexture($clu_ctx.context, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, $gl_tex_id)
+  $clu_result_memobj = CLUMemory.newBuffer($clu_ctx.context, CL_MEM_WRITE_ONLY, Fiddle::SIZEOF_CHAR * 4 * $width * $height)
 
   random_color($color_A)
   random_color($color_B)
