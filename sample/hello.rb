@@ -1,9 +1,11 @@
+# An example using raw OpenCL API.
+# For more samples, visit https://github.com/vaiorabbit/ruby-opencl/tree/master/sample .
 #
 # Usage : $ ruby hello.rb
 #         Hello, World!
 #
 # Ref.: http://www.fixstars.com/en/opencl/book/sample/
-#
+
 require_relative '../lib/opencl'
 
 # Load DLL

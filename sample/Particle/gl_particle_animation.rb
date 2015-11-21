@@ -1,19 +1,21 @@
 # Ref.: https://github.com/pyopencl/pyopencl/blob/master/examples/gl_particle_animation.pyg
 #       http://enja.org/2011/03/22/adventures-in-pyopencl-part-2-particles-with-pyopengl/ (See LICENSE.txt)
 
+require 'rbconfig'
 require '../util/setup_glut'
-require '../util/rmath3d_plain'
 require_relative '../../lib/opencl'
 require_relative '../../lib/opencl_ext'
 require_relative '../../lib/opencl_gl'
 require_relative '../../lib/opencl_gl_ext'
 
-include RMath3D
 include OpenCL
 
 # Load DLL
-OpenCL.load_lib('/System/Library/Frameworks/OpenCL.framework/OpenCL') # For Mac OS X
-# OpenCL.load_lib('c:/Program Files/NVIDIA Corporation/OpenCL/OpenCL64.dll') # For Windows x86-64 NVIDIA GPU (* comes with NVIDIA Driver)
+begin
+  OpenCL.load_lib('c:/Windows/System32/OpenCL.dll') # For Windows
+rescue
+  OpenCL.load_lib('/System/Library/Frameworks/OpenCL.framework/OpenCL') # For Mac OS X
+end
 
 $width = 800
 $height = 600
@@ -36,35 +38,6 @@ $cl_start_position = nil
 $cl_start_velocity = nil
 $cl_gl_position = nil
 $cl_gl_color = nil
-
-=begin
-# Saves as .tga
-$ss_name = "ss0000.tga"
-$ss_id = 0
-def save_screenshot(w, h, name)
-  image = Fiddle::Pointer.malloc(Fiddle::SIZEOF_CHAR * w * h * 4)
-  return if image == nil
-
-  glReadPixels(0, 0, w, h, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, image)
-
-  File.open( name, 'wb' ) do |fout|
-    fout.write [0].pack('c')      # identsize
-    fout.write [0].pack('c')      # colourmaptype
-    fout.write [2].pack('c')      # imagetype
-    fout.write [0].pack('s')      # colourmapstart
-    fout.write [0].pack('s')      # colourmaplength
-    fout.write [0].pack('c')      # colourmapbits
-    fout.write [0].pack('s')      # xstart
-    fout.write [0].pack('s')      # ystart
-    fout.write [w].pack('s')      # image_width
-    fout.write [h].pack('s')      # image_height
-    fout.write [8 * 4].pack('c')  # image_bits_per_pixel
-    fout.write [8].pack('c')      # descriptor
-
-    fout.write image[0, Fiddle::SIZEOF_CHAR * w * h * 4]
-  end
-end
-=end
 
 # cl_context : ctx, cl_device_id : dev, String : kernel_source
 def build_program(ctx, dev, kernel_source)
@@ -186,9 +159,9 @@ def on_display()
 
   clEnqueueAcquireGLObjects($cl_cq, 2, [$cl_gl_position, $cl_gl_color].pack("Q2"), 0, nil, 0)
 
-  err = clEnqueueNDRangeKernel($cl_cq, $cl_kern,
-                               1, nil, [$pos.length / 4].pack("L"), nil,
-                               0, nil, nil)
+  clEnqueueNDRangeKernel($cl_cq, $cl_kern,
+                         1, nil, [$pos.length / 4].pack("L"), nil,
+                         0, nil, nil)
 
   clEnqueueReleaseGLObjects($cl_cq, 2, [$cl_gl_position, $cl_gl_color].pack("Q2"), 0, nil, 0)
   clFinish($cl_cq)
@@ -225,11 +198,6 @@ def on_display()
   glDisable(GL_BLEND)
 
   glutSwapBuffers()
-=begin
-  $ss_name = sprintf("ss%05d.tga", $ss_id)
-  save_screenshot($width, $height, $ss_name)
-  $ss_id += 1
-=end
 end
 
 if __FILE__ == $0
@@ -263,10 +231,37 @@ if __FILE__ == $0
   cl_device_ids = cl_devices_buf.unpack("Q#{cl_devices_entry_count}")
 
   # Context
-  kCGLContext = CGLGetCurrentContext() # CGLContextObj
-  kCGLShareGroup = CGLGetShareGroup(kCGLContext) # CGLShareGroupObj
-  props = [ CL_CONTEXT_PROPERTY_USE_CGL_SHAREGROUP_APPLE, kCGLShareGroup,
-            0 ]
+  props = nil
+  case RbConfig::CONFIG['host_os']
+
+  when /mswin|msys|mingw|cygwin/
+    # for Windows
+    hGLRC = wglGetCurrentContext()
+    hDC   = wglGetCurrentDC()
+    props = [ OpenCL::CL_GL_CONTEXT_KHR, hGLRC,
+              OpenCL::CL_WGL_HDC_KHR, hDC,
+              OpenCL::CL_CONTEXT_PLATFORM, platform,
+              0 ]
+
+  when /darwin/
+    # for Mac OS X
+    hCGLContext    = CGLGetCurrentContext()
+    hCGLShareGroup = CGLGetShareGroup(hCGLContext)
+    props = [ OpenCL::CL_CONTEXT_PROPERTY_USE_CGL_SHAREGROUP_APPLE, hCGLShareGroup,
+              0 ]
+
+  when /linux/
+    # for Linux (X Window)
+    hGLXContext = glXGetCurrentContext()
+    hDisplay    = glXGetCurrentDisplay()
+    props = [ OpenCL::CL_GL_CONTEXT_KHR, hGLXContext,
+              OpenCL::CL_GLX_DISPLAY_KHR, hDisplay,
+              OpenCL::CL_CONTEXT_PLATFORM, platform,
+              0 ]
+
+  else
+    raise RuntimeError, "OpenCL : Unknown OS: #{host_os.inspect}"
+  end
 
   errcode_ret_buf = ' ' * 4
   cl_ctx = clCreateContext(props.pack("Q*"), 1, cl_devices_buf, nil, nil, errcode_ret_buf)
@@ -274,7 +269,7 @@ if __FILE__ == $0
   # Command Queues
   $cl_cq = clCreateCommandQueue(cl_ctx, cl_device_ids[0], 0, errcode_ret_buf)
 
-  $cl_velocity = clCreateBuffer(cl_ctx, CL_MEM_COPY_HOST_PTR, Fiddle::SIZEOF_FLOAT * $vel.length, $vel.pack("F*"), nil)
+  $cl_velocity       = clCreateBuffer(cl_ctx, CL_MEM_COPY_HOST_PTR, Fiddle::SIZEOF_FLOAT * $vel.length, $vel.pack("F*"), nil)
   $cl_start_position = clCreateBuffer(cl_ctx, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, Fiddle::SIZEOF_FLOAT * $pos.length, $pos.pack("F*"), nil)
   $cl_start_velocity = clCreateBuffer(cl_ctx, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, Fiddle::SIZEOF_FLOAT * $vel.length, $vel.pack("F*"), nil)
 

@@ -7,8 +7,11 @@ require_relative '../util/clu'
 include OpenCL
 
 # Load DLL
-OpenCL.load_lib('/System/Library/Frameworks/OpenCL.framework/OpenCL') # For Mac OS X
-# OpenCL.load_lib('c:/Program Files/NVIDIA Corporation/OpenCL/OpenCL64.dll') # For Windows x86-64 NVIDIA GPU (* comes with NVIDIA Driver)
+begin
+  OpenCL.load_lib('c:/Windows/System32/OpenCL.dll') # For Windows
+rescue
+  OpenCL.load_lib('/System/Library/Frameworks/OpenCL.framework/OpenCL') # For Mac OS X
+end
 
 $width = 800
 $height = 600
@@ -129,9 +132,7 @@ def on_display()
   glFinish()
 
   $clu_cq.enqueueAcquireGLObjects([$clu_gl_position.mem.to_i, $clu_gl_color.mem.to_i])
-
   $clu_cq.enqueueNDRangeKernel($clu_kern.kernel, 1, nil, [$pos.length / 4], nil)
-
   $clu_cq.enqueueReleaseGLObjects([$clu_gl_position.mem.to_i, $clu_gl_color.mem.to_i])
   $clu_cq.finish
 
@@ -183,35 +184,26 @@ if __FILE__ == $0
 
   # Platform
   clu_platform = CLUPlatform.new
-  clu_platform.getPlatformIDs()
 
   OpenCL.import_ext(clu_platform.platforms[0])
   OpenCL.import_gl
   OpenCL.import_gl_ext(clu_platform.platforms[0])
 
   # Devices
-  clu_device = CLUDevice.new
-  clu_device.getDeviceIDs(clu_platform.platforms[0], CL_DEVICE_TYPE_DEFAULT)
+  clu_device = CLUDevice.new(clu_platform.platforms[0], CL_DEVICE_TYPE_DEFAULT)
 
   # Context
-  $clu_ctx = CLUContext.new
-  $clu_ctx.createContextWithGLInterop([OpenCL::CL_CONTEXT_PLATFORM, clu_platform.platforms[0], 0], clu_device.devices, clu_platform.platforms[0])
+  $clu_ctx = CLUContext.newContextWithGLInterop([OpenCL::CL_CONTEXT_PLATFORM, clu_platform.platforms[0], 0], clu_device.devices, clu_platform.platforms[0])
 
   # Command Queues
-  $clu_cq = CLUCommandQueue.new
-  $clu_cq.createCommandQueue($clu_ctx.context, clu_device.devices[0])
+  $clu_cq = CLUCommandQueue.newCommandQueue($clu_ctx.context, clu_device.devices[0])
 
-  $clu_velocity = CLUMemory.new
-  $clu_velocity.createBuffer($clu_ctx.context, CL_MEM_COPY_HOST_PTR, Fiddle::SIZEOF_FLOAT * $vel.length, $vel.pack("F*"))
-  $clu_start_position = CLUMemory.new
-  $clu_start_position.createBuffer($clu_ctx.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, Fiddle::SIZEOF_FLOAT * $pos.length, $pos.pack("F*"))
-  $clu_start_velocity = CLUMemory.new
-  $clu_start_velocity.createBuffer($clu_ctx.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, Fiddle::SIZEOF_FLOAT * $vel.length, $vel.pack("F*"))
+  $clu_velocity       = CLUMemory.newBuffer($clu_ctx.context, CL_MEM_COPY_HOST_PTR, Fiddle::SIZEOF_FLOAT * $vel.length, $vel.pack("F*"))
+  $clu_start_position = CLUMemory.newBuffer($clu_ctx.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, Fiddle::SIZEOF_FLOAT * $pos.length, $pos.pack("F*"))
+  $clu_start_velocity = CLUMemory.newBuffer($clu_ctx.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, Fiddle::SIZEOF_FLOAT * $vel.length, $vel.pack("F*"))
 
-  $clu_gl_position = CLUMemory.new
-  $clu_gl_position.createFromGLBuffer($clu_ctx.context, CL_MEM_READ_WRITE, $gl_position)
-  $clu_gl_color = CLUMemory.new
-  $clu_gl_color.createFromGLBuffer($clu_ctx.context, CL_MEM_READ_WRITE, $gl_color)
+  $clu_gl_position = CLUMemory.newFromGLBuffer($clu_ctx.context, CL_MEM_READ_WRITE, $gl_position)
+  $clu_gl_color    = CLUMemory.newFromGLBuffer($clu_ctx.context, CL_MEM_READ_WRITE, $gl_color)
 
   kernel_source = <<-SRC
     __kernel void particle_fountain(__global float4* position, 
@@ -246,11 +238,9 @@ if __FILE__ == $0
     }
   SRC
 
-  $clu_prog = CLUProgram.new
-  $clu_prog.createProgramWithSource($clu_ctx.context, [kernel_source])
+  $clu_prog = CLUProgram.newProgramWithSource($clu_ctx.context, [kernel_source])
   $clu_prog.buildProgram(clu_device.devices)
-  $clu_kern = CLUKernel.new
-  $clu_kern.createKernel($clu_prog.program, "particle_fountain")
+  $clu_kern = CLUKernel.newKernel($clu_prog.program, "particle_fountain")
 
   $clu_kern.setKernelArg(0, Fiddle::TYPE_VOIDP, [$clu_gl_position.mem.to_i])
   $clu_kern.setKernelArg(1, Fiddle::TYPE_VOIDP, [$clu_gl_color.mem.to_i])
