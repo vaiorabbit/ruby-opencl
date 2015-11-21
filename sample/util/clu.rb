@@ -7,10 +7,15 @@ require_relative '../../lib/opencl_gl_ext'
 ################################################################################
 
 class CLUPlatform
-  attr_reader :platforms # Array of cl_platform_id
-
   def initialize
-    @platforms = nil
+    @platforms = nil # Array of cl_platform_id
+  end
+
+  def platforms
+    if @platforms == nil
+      getPlatformIDs()
+    end
+    return @platforms
   end
 
   def getPlatformIDs(error_info: nil)
@@ -51,8 +56,13 @@ end
 class CLUDevice
   attr_reader :devices # Array of cl_device_id
 
-  def initialize
+  # cl_platform_id   : platform
+  # cl_device_type   : device_type
+  def initialize(platform = nil, device_type = OpenCL::CL_DEVICE_TYPE_DEFAULT)
     @devices = nil
+    if platform != nil
+      getDeviceIDs(platform, device_type)
+    end
   end
 
   # cl_platform_id   : platform
@@ -284,6 +294,7 @@ class CLUContext
       properties.concat(props)
 
     when /linux/
+      # for Linux (X Window)
       hGLXContext = glXGetCurrentContext()
       hDisplay    = glXGetCurrentDisplay()
       props = [ OpenCL::CL_GL_CONTEXT_KHR, hGLXContext,
@@ -294,7 +305,6 @@ class CLUContext
 
     else
       raise RuntimeError, "OpenCL : Unknown OS: #{host_os.inspect}"
-
     end
 
     return createContext(properties, devices, pfn_notify: pfn_notify, user_data: user_data, error_info: error_info)
@@ -476,7 +486,6 @@ class CLUMemory
     return OpenCL.clReleaseMemObject(mem)
   end
 
-
   # cl_mem           : memobj
   # cl_mem_info      : param_name
   def getMemObjectInfo(param_name, memobj: @mem, error_info: nil)
@@ -598,7 +607,6 @@ class CLUMemory
     OpenCL::CL_GL_TEXTURE_TARGET => "L",
     OpenCL::CL_GL_MIPMAP_LEVEL => "l",
   }
-
 end
 
 ################################################################################
@@ -731,7 +739,6 @@ class CLUCommandQueue
     event << event_buf.unpack("Q")[0] if event != nil
     return err
   end
-
 
   # cl_command_queue   : command_queue
   # cl_mem             : src_buffer
@@ -868,7 +875,6 @@ class CLUCommandQueue
     event << event_buf.unpack("Q")[0] if event != nil
     return err
   end
-
 
   # cl_command_queue : command_queue
   # cl_mem           : buffer

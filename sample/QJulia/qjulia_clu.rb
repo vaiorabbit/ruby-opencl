@@ -1,10 +1,6 @@
 require 'rbconfig'
 require '../util/setup_glfw'
 require '../util/clu'
-require_relative '../../lib/opencl'
-require_relative '../../lib/opencl_ext'
-require_relative '../../lib/opencl_gl'
-require_relative '../../lib/opencl_gl_ext'
 
 # Load DLL
 OpenCL.load_lib('/System/Library/Frameworks/OpenCL.framework/OpenCL') # For Mac OS X
@@ -26,12 +22,12 @@ $mu_C  = [ -0.278, -0.479, -0.231, 0.235 ]
 
 $gl_tex_id = nil
 
-$clu_ctx = nil
-$clu_cq = nil
-$clu_prog = nil
-$clu_kern = nil
-$clu_image_memobj = nil
-$clu_result_memobj = nil
+$clu_ctx = CLUContext.new
+$clu_cq = CLUCommandQueue.new
+$clu_prog = CLUProgram.new
+$clu_kern = CLUKernel.new
+$clu_image_memobj = CLUMemory.new
+$clu_result_memobj = CLUMemory.new
 $max_workgroup_size = nil
 $workgroup_size = [nil, nil]
 $workgroup_items = 32
@@ -185,43 +181,35 @@ end
 def init_cl()
   # Platform
   clu_platform = CLUPlatform.new
-  clu_platform.getPlatformIDs()
 
   OpenCL.import_ext(clu_platform.platforms[0])
   OpenCL.import_gl
   OpenCL.import_gl_ext(clu_platform.platforms[0])
 
   # Devices
-  clu_device = CLUDevice.new
-  clu_device.getDeviceIDs(clu_platform.platforms[0], CL_DEVICE_TYPE_GPU)
+  clu_device = CLUDevice.new(clu_platform.platforms[0], CL_DEVICE_TYPE_GPU)
 
   # Check functionality
   image_support = clu_device.getDeviceInfo(CL_DEVICE_IMAGE_SUPPORT)
   abort("Qjulia requires images: Images not supported on this device.") if image_support == CL_FALSE
 
   # Context
-  $clu_ctx = CLUContext.new
-  $clu_ctx.createContextWithGLInterop([OpenCL::CL_CONTEXT_PLATFORM, clu_platform.platforms[0], 0], clu_device.devices, clu_platform.platforms[0])
+  $clu_ctx.createContextWithGLInterop([CL_CONTEXT_PLATFORM, clu_platform.platforms[0], 0], clu_device.devices, clu_platform.platforms[0])
 
   # Command Queues
-  $clu_cq = CLUCommandQueue.new
   $clu_cq.createCommandQueue($clu_ctx.context, clu_device.devices[0])
 
   kernel_source = "#define WIDTH (#{$width})\n#define HEIGHT (#{$height})\n" + File.read("qjulia_kernel.cl")
-  $clu_prog = CLUProgram.new
   $clu_prog.createProgramWithSource($clu_ctx.context, [kernel_source])
-  $clu_prog.buildProgram(clu_device.devices, options: "-cl-kernel-arg-info")
-  $clu_kern = CLUKernel.new
+  $clu_prog.buildProgram(clu_device.devices)
   $clu_kern.createKernel($clu_prog.program, "QJuliaKernel")
 
-  $max_workgroup_size = $clu_kern.getKernelWorkGroupInfo(OpenCL::CL_KERNEL_WORK_GROUP_SIZE, clu_device.devices[0])
+  $max_workgroup_size = $clu_kern.getKernelWorkGroupInfo(CL_KERNEL_WORK_GROUP_SIZE, clu_device.devices[0])
 
   $workgroup_size[0] = $max_workgroup_size > 1 ? ($max_workgroup_size / $workgroup_items) : $max_workgroup_size
   $workgroup_size[1] = $max_workgroup_size / $workgroup_size[0]
 
-  $clu_image_memobj = CLUMemory.new
   $clu_image_memobj.createFromGLTexture($clu_ctx.context, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, $gl_tex_id)
-  $clu_result_memobj = CLUMemory.new
   $clu_result_memobj.createBuffer($clu_ctx.context, CL_MEM_WRITE_ONLY, Fiddle::SIZEOF_CHAR * 4 * $width * $height)
 
   random_color($color_A)
