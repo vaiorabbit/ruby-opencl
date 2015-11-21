@@ -448,6 +448,24 @@ class CLUMemory
     end
   end
 
+  # cl_context   : context
+  # cl_mem_flags : flags
+  # cl_GLuint    : renderbuffer
+  def createFromGLRenderBuffer(context, flags, renderbuffer, error_info: nil)
+    errcode_ret_buf = ' ' * 4
+
+    mem = OpenCL.clCreateFromGLRenderBuffer(context, flags, renderbuffer, errcode_ret_buf)
+    errcode_ret = errcode_ret_buf.unpack("l")[0]
+    error_info << errcode_ret if error_info != nil
+
+    if errcode_ret == OpenCL::CL_SUCCESS
+      @mem = mem
+      return @mem
+    else
+      return nil
+    end
+  end
+
   # cl_mem : mem
   def retainMemObject(mem: @mem)
     return OpenCL.clRetainMemObject(mem)
@@ -543,6 +561,44 @@ class CLUMemory
     OpenCL::CL_IMAGE_NUM_MIP_LEVELS => "L",
     OpenCL::CL_IMAGE_NUM_SAMPLES => "L",
   }
+
+  # cl_mem           : memobj
+  def getGLObjectInfo(memobj: @mem, error_info: nil)
+    # cl_gl_object_type *   : gl_object_type
+    # cl_GLuint *           : gl_object_name
+    gl_object_type_buf = ' ' * 8
+    gl_object_name_buf = ' ' * 4
+
+    err = OpenCL.clGetGLObjectInfo(memobj, gl_object_type_buf, gl_object_name_buf)
+    error_info << err if error_info != nil
+
+    return gl_object_type_buf.unpack("L")[0], gl_object_name_buf.unpack("L")[0]
+  end
+
+  # cl_mem           : memobj
+  # cl_image_info    : param_name
+  def getGLTextureInfo(param_name, memobj: @mem, error_info: nil)
+    # size_t          : param_value_size
+    # void *          : param_value
+    # size_t *        : param_value_size_ret
+    param_value_buf_length = 1024
+    param_value_buf = ' ' * param_value_buf_length
+    param_value_size_ret_buf = ' ' * 4
+
+    err = OpenCL.clGetGLTextureInfo(memobj, param_name, param_value_buf_length, param_value_buf, param_value_size_ret_buf)
+    error_info << err if error_info != nil
+
+    param_value_size_ret = param_value_size_ret_buf.unpack("L")[0]
+
+    unpack_format = @@mem_gltextureinfo_param2unpack[param_name]
+    return param_value_buf.unpack(unpack_format)[0]
+  end
+
+  @@mem_gltextureinfo_param2unpack = {
+    OpenCL::CL_GL_TEXTURE_TARGET => "L",
+    OpenCL::CL_GL_MIPMAP_LEVEL => "l",
+  }
+
 end
 
 ################################################################################
@@ -899,7 +955,7 @@ class CLUCommandQueue
     num_events_in_wait_list = event_wait_list == nil ? 0 : event_wait_list.length
 
     global_work_offset_buf = global_work_offset == nil ? nil : global_work_offset.pack("Q*")
-    local_work_size_buf = local_work_size == nil ? nil : local_work_size..pack("Q*")
+    local_work_size_buf = local_work_size == nil ? nil : local_work_size.pack("Q*")
 
     err = OpenCL.clEnqueueNDRangeKernel(command_queue, kernel, work_dim, global_work_offset_buf, global_work_size.pack("Q*"), local_work_size_buf, num_events_in_wait_list, event_wait_list == nil ? nil : event_wait_list.pack("Q"), event_buf)
     error_info << err if error_info != nil
