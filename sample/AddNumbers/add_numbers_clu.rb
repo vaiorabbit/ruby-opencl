@@ -28,45 +28,45 @@ if $0 == __FILE__
 
   # Create device and context
   clu_platform = CLUPlatform.new
-  clu_device = CLUDevice.new(clu_platform.platforms[0], CL_DEVICE_TYPE_DEFAULT)
+  clu_device = CLUDevice.new(clu_platform[0], CL_DEVICE_TYPE_DEFAULT)
   clu_ctx = CLUContext.newContext(nil, clu_device.devices)
   abort("Couldn't create a context") if clu_ctx == nil
 
   # Build program
   kernel_source = File.read(PROGRAM_FILE)
-  clu_prog = CLUProgram.newProgramWithSource(clu_ctx.context, [kernel_source])
+  clu_prog = CLUProgram.newProgramWithSource(clu_ctx, [kernel_source])
   clu_prog.buildProgram(clu_device.devices)
 
   # Create data buffer
   global_size = 8
   local_size = 4
   num_groups = global_size/local_size
-  input_buffer = CLUMemory.newBuffer(clu_ctx.context, CL_MEM_READ_ONLY  | CL_MEM_COPY_HOST_PTR, ARRAY_SIZE * Fiddle::SIZEOF_FLOAT, data.pack("F*"))
-  sum_buffer   = CLUMemory.newBuffer(clu_ctx.context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, num_groups * Fiddle::SIZEOF_FLOAT, sum.pack("F*"))
-
+  input_buffer = CLUMemory.newBuffer(clu_ctx, CL_MEM_READ_ONLY  | CL_MEM_COPY_HOST_PTR, ARRAY_SIZE * Fiddle::SIZEOF_FLOAT, data.pack("F*"))
+  sum_buffer   = CLUMemory.newBuffer(clu_ctx, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, num_groups * Fiddle::SIZEOF_FLOAT, sum.pack("F*"))
+p clu_ctx.class
   abort("Couldn't create a buffer") if input_buffer == nil || sum_buffer == nil
 
   # Create a command queue
-  clu_cq = CLUCommandQueue.newCommandQueue(clu_ctx.context, clu_device.devices[0])
+  clu_cq = CLUCommandQueue.newCommandQueue(clu_ctx, clu_device[0])
   abort("Couldn't create a command queue") if clu_cq == nil
 
   # Create a kernel
-  clu_kern = CLUKernel.newKernel(clu_prog.program, KERNEL_FUNC)
+  clu_kern = CLUKernel.newKernel(clu_prog, KERNEL_FUNC)
   abort("Couldn't create a kernel") if clu_kern == nil
 
   # Create kernel arguments
-  err  = clu_kern.setKernelArg(0, Fiddle::TYPE_VOIDP, [input_buffer.mem.to_i]) # __global
-  err |= clu_kern.setLocalKernelArg(1, local_size * Fiddle::SIZEOF_FLOAT)      # __local
-  err |= clu_kern.setKernelArg(2, Fiddle::TYPE_VOIDP, [sum_buffer.mem.to_i])   # __global
+  err  = clu_kern.setKernelArg(0, Fiddle::TYPE_VOIDP, [input_buffer.handle.to_i]) # __global
+  err |= clu_kern.setLocalKernelArg(1, local_size * Fiddle::SIZEOF_FLOAT)         # __local
+  err |= clu_kern.setKernelArg(2, Fiddle::TYPE_VOIDP, [sum_buffer.handle.to_i])   # __global
   abort("Couldn't create a kernel argument") if err < 0
 
   # Enqueue kernel
-  err = clu_cq.enqueueNDRangeKernel(clu_kern.kernel, 1, nil, [global_size], [local_size])
+  err = clu_cq.enqueueNDRangeKernel(clu_kern, 1, nil, [global_size], [local_size])
   abort("Couldn't enqueue the kernel") if err < 0
 
   # Read the kernel's output
   sum_buf = ' ' * 4 * num_groups
-  err = clu_cq.enqueueReadBuffer(sum_buffer.mem, CL_TRUE, 0, Fiddle::SIZEOF_FLOAT * num_groups, sum_buf)
+  err = clu_cq.enqueueReadBuffer(sum_buffer, CL_TRUE, 0, Fiddle::SIZEOF_FLOAT * num_groups, sum_buf)
   sum = sum_buf.unpack("F#{num_groups}")
   abort("Couldn't read the buffer") if err < 0
 

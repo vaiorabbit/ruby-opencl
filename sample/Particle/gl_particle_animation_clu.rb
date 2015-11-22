@@ -131,9 +131,9 @@ def on_display()
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
   glFinish()
 
-  $clu_cq.enqueueAcquireGLObjects([$clu_gl_position.mem.to_i, $clu_gl_color.mem.to_i])
-  $clu_cq.enqueueNDRangeKernel($clu_kern.kernel, 1, nil, [$pos.length / 4], nil)
-  $clu_cq.enqueueReleaseGLObjects([$clu_gl_position.mem.to_i, $clu_gl_color.mem.to_i])
+  $clu_cq.enqueueAcquireGLObjects([$clu_gl_position, $clu_gl_color])
+  $clu_cq.enqueueNDRangeKernel($clu_kern, 1, nil, [$pos.length / 4], nil)
+  $clu_cq.enqueueReleaseGLObjects([$clu_gl_position, $clu_gl_color])
   $clu_cq.finish
 
   glMatrixMode(GL_MODELVIEW)
@@ -185,25 +185,25 @@ if __FILE__ == $0
   # Platform
   clu_platform = CLUPlatform.new
 
-  OpenCL.import_ext(clu_platform.platforms[0])
+  OpenCL.import_ext(clu_platform[0])
   OpenCL.import_gl
-  OpenCL.import_gl_ext(clu_platform.platforms[0])
+  OpenCL.import_gl_ext(clu_platform[0])
 
   # Devices
   clu_device = CLUDevice.new(clu_platform.platforms[0], CL_DEVICE_TYPE_DEFAULT)
 
   # Context
-  $clu_ctx = CLUContext.newContextWithGLInterop([OpenCL::CL_CONTEXT_PLATFORM, clu_platform.platforms[0], 0], clu_device.devices, clu_platform.platforms[0])
+  $clu_ctx = CLUContext.newContextWithGLInterop([OpenCL::CL_CONTEXT_PLATFORM, clu_platform[0], 0], clu_device, clu_platform[0])
 
   # Command Queues
-  $clu_cq = CLUCommandQueue.newCommandQueue($clu_ctx.context, clu_device.devices[0])
+  $clu_cq = CLUCommandQueue.newCommandQueue($clu_ctx, clu_device[0])
 
-  $clu_velocity       = CLUMemory.newBuffer($clu_ctx.context, CL_MEM_COPY_HOST_PTR, Fiddle::SIZEOF_FLOAT * $vel.length, $vel.pack("F*"))
-  $clu_start_position = CLUMemory.newBuffer($clu_ctx.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, Fiddle::SIZEOF_FLOAT * $pos.length, $pos.pack("F*"))
-  $clu_start_velocity = CLUMemory.newBuffer($clu_ctx.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, Fiddle::SIZEOF_FLOAT * $vel.length, $vel.pack("F*"))
+  $clu_velocity       = CLUMemory.newBuffer($clu_ctx, CL_MEM_COPY_HOST_PTR, Fiddle::SIZEOF_FLOAT * $vel.length, $vel.pack("F*"))
+  $clu_start_position = CLUMemory.newBuffer($clu_ctx, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, Fiddle::SIZEOF_FLOAT * $pos.length, $pos.pack("F*"))
+  $clu_start_velocity = CLUMemory.newBuffer($clu_ctx, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, Fiddle::SIZEOF_FLOAT * $vel.length, $vel.pack("F*"))
 
-  $clu_gl_position = CLUMemory.newFromGLBuffer($clu_ctx.context, CL_MEM_READ_WRITE, $gl_position)
-  $clu_gl_color    = CLUMemory.newFromGLBuffer($clu_ctx.context, CL_MEM_READ_WRITE, $gl_color)
+  $clu_gl_position = CLUMemory.newFromGLBuffer($clu_ctx, CL_MEM_READ_WRITE, $gl_position)
+  $clu_gl_color    = CLUMemory.newFromGLBuffer($clu_ctx, CL_MEM_READ_WRITE, $gl_color)
 
   kernel_source = <<-SRC
     __kernel void particle_fountain(__global float4* position, 
@@ -238,15 +238,15 @@ if __FILE__ == $0
     }
   SRC
 
-  $clu_prog = CLUProgram.newProgramWithSource($clu_ctx.context, [kernel_source])
+  $clu_prog = CLUProgram.newProgramWithSource($clu_ctx, [kernel_source])
   $clu_prog.buildProgram(clu_device.devices)
-  $clu_kern = CLUKernel.newKernel($clu_prog.program, "particle_fountain")
+  $clu_kern = CLUKernel.newKernel($clu_prog, "particle_fountain")
 
-  $clu_kern.setKernelArg(0, Fiddle::TYPE_VOIDP, [$clu_gl_position.mem.to_i])
-  $clu_kern.setKernelArg(1, Fiddle::TYPE_VOIDP, [$clu_gl_color.mem.to_i])
-  $clu_kern.setKernelArg(2, Fiddle::TYPE_VOIDP, [$clu_velocity.mem.to_i])
-  $clu_kern.setKernelArg(3, Fiddle::TYPE_VOIDP, [$clu_start_position.mem.to_i])
-  $clu_kern.setKernelArg(4, Fiddle::TYPE_VOIDP, [$clu_start_velocity.mem.to_i])
+  $clu_kern.setKernelArg(0, Fiddle::TYPE_VOIDP, [$clu_gl_position.handle.to_i])
+  $clu_kern.setKernelArg(1, Fiddle::TYPE_VOIDP, [$clu_gl_color.handle.to_i])
+  $clu_kern.setKernelArg(2, Fiddle::TYPE_VOIDP, [$clu_velocity.handle.to_i])
+  $clu_kern.setKernelArg(3, Fiddle::TYPE_VOIDP, [$clu_start_position.handle.to_i])
+  $clu_kern.setKernelArg(4, Fiddle::TYPE_VOIDP, [$clu_start_velocity.handle.to_i])
   $clu_kern.setKernelArg(5, Fiddle::TYPE_FLOAT, [$time_step])
 
   glutMainLoop()

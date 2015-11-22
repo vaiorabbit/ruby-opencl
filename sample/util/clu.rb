@@ -18,6 +18,10 @@ class CLUPlatform
     return @platforms
   end
 
+  def [](index)
+    platforms[index]
+  end
+
   def getPlatformIDs(error_info: nil)
     # cl_uint         : num_entries
     # cl_platform_id* : platforms
@@ -65,6 +69,10 @@ class CLUDevice
     end
   end
 
+  def [](index)
+    @devices[index]
+  end
+
   # cl_platform_id   : platform
   # cl_device_type   : device_type
   def getDeviceIDs(platform, device_type, error_info: nil)
@@ -96,6 +104,8 @@ class CLUDevice
     end
   end
 
+  alias_method :retain, :retainDevices
+
   # cl_device_id : device
   def releaseDevice(device: @devices[0], error_info: nil)
     return OpenCL.clReleaseDevice(device)
@@ -107,6 +117,8 @@ class CLUDevice
       error_info << err if error_info != nil
     end
   end
+
+  alias_method :release, :releaseDevices
 
   # cl_device_id    : device
   # cl_device_info  : param_name
@@ -247,11 +259,16 @@ class CLUContext
     @context = nil # cl_context
   end
 
+  def handle
+    @context
+  end
+
   # cl_context_properties * : properties
   # cl_device_id *          : devices
   # void *                  : pfn_notify(char *, void *, size_t, void *),
   # void *                  : user_data
   def createContext(properties, devices, pfn_notify: nil, user_data: nil, error_info: nil)
+    devices = devices.devices if devices.kind_of? CLUDevice
     packed_properties = properties == nil ? nil : properties.pack("Q*")
     num_devices = devices.length
     errcode_ret_buf = ' ' * 4
@@ -328,10 +345,14 @@ class CLUContext
     return OpenCL.clRetainContext(context)
   end
 
+  alias_method :retain, :retainContext
+
   # cl_context : context
   def releaseContext(context: @context)
     return OpenCL.clReleaseContext(context)
   end
+
+  alias_method :release, :releaseContext
 
   # cl_context      : context
   # cl_context_info : param_name
@@ -394,11 +415,16 @@ class CLUMemory
     @mem = nil
   end
 
+  def handle
+    @mem
+  end
+
   # cl_context   : context
   # cl_mem_flags : flags
   # size_t       : size
   # void *       : host_ptr
   def createBuffer(context, flags, size, host_ptr = nil, error_info: nil)
+    context = context.handle if context.kind_of? CLUContext
     errcode_ret_buf = ' ' * 4
 
     mem = OpenCL.clCreateBuffer(context, flags, size, host_ptr, errcode_ret_buf)
@@ -425,6 +451,7 @@ class CLUMemory
   # const cl_image_desc *   : image_desc
   # void *                  : host_ptr
   def createImage(context, flags, image_format, image_desc, host_ptr = nil, error_info: nil)
+    context = context.handle if context.kind_of? CLUContext
     errcode_ret_buf = ' ' * 4
 
     mem = OpenCL.clCreateImage(context, flags, image_format, image_desc, host_ptr, errcode_ret_buf)
@@ -449,6 +476,7 @@ class CLUMemory
   # cl_mem_flags   : flags
   # cl_GLuint      : bufobj
   def createFromGLBuffer(context, flags, bufobj, error_info: nil)
+    context = context.handle if context.kind_of? CLUContext
     errcode_ret_buf = ' ' * 4
 
     mem = OpenCL.clCreateFromGLBuffer(context, flags, bufobj, errcode_ret_buf)
@@ -475,6 +503,7 @@ class CLUMemory
   # cl_GLint        : miplevel
   # cl_GLuint       : texture
   def createFromGLTexture(context, flags, target, miplevel, texture, error_info: nil)
+    context = context.handle if context.kind_of? CLUContext
     errcode_ret_buf = ' ' * 4
 
     mem = OpenCL.clCreateFromGLTexture(context, flags, target, miplevel, texture, errcode_ret_buf)
@@ -499,6 +528,7 @@ class CLUMemory
   # cl_mem_flags : flags
   # cl_GLuint    : renderbuffer
   def createFromGLRenderBuffer(context, flags, renderbuffer, error_info: nil)
+    context = context.handle if context.kind_of? CLUContext
     errcode_ret_buf = ' ' * 4
 
     mem = OpenCL.clCreateFromGLRenderBuffer(context, flags, renderbuffer, errcode_ret_buf)
@@ -524,10 +554,14 @@ class CLUMemory
     return OpenCL.clRetainMemObject(mem)
   end
 
+  alias_method :retain, :retainMemObject
+
   # cl_mem : mem
   def releaseMemObject(mem: @mem)
     return OpenCL.clReleaseMemObject(mem)
   end
+
+  alias_method :release, :releaseMemObject
 
   # cl_mem           : memobj
   # cl_mem_info      : param_name
@@ -661,10 +695,15 @@ class CLUCommandQueue
     @command_queue = nil # cl_command_queue
   end
 
+  def handle
+    @command_queue
+  end
+
   # cl_context                     : context
   # cl_device_id                   : device
   # cl_command_queue_properties    : properties
   def createCommandQueue(context, device, properties = 0, error_info: nil)
+    context = context.handle if context.kind_of? CLUContext
     errcode_ret_buf = ' ' * 4
 
     cl_cq = OpenCL.clCreateCommandQueue(context, device, properties, errcode_ret_buf)
@@ -690,10 +729,14 @@ class CLUCommandQueue
     return OpenCL.clRetainCommandQueue(command_queue)
   end
 
+  alias_method :retain, :retainCommandQueue
+
   # cl_command_queue : command_queue
   def releaseCommandQueue(command_queue: @command_queue)
     return OpenCL.clReleaseCommandQueue(command_queue)
   end
+
+  alias_method :release, :releaseCommandQueue
 
   # cl_command_queue : command_queue
   def flush(command_queue: @command_queue)
@@ -740,6 +783,7 @@ class CLUCommandQueue
   # const cl_event *    : event_wait_list
   # cl_event *          : event
   def enqueueReadBuffer(buffer, blocking_read, offset, size, ptr, command_queue: @command_queue, event_wait_list: nil, event: nil, error_info: nil)
+    buffer = buffer.handle if buffer.kind_of? CLUMemory
     event_buf = event == nil ? nil : ' ' * 8
     num_events_in_wait_list = event_wait_list == nil ? 0 : event_wait_list.length
 
@@ -759,6 +803,7 @@ class CLUCommandQueue
   # const cl_event *   : event_wait_list
   # cl_event *         : event
   def enqueueWriteBuffer(buffer, blocking_write, offset, size, ptr, command_queue: @command_queue, event_wait_list: nil, event: nil, error_info: nil)
+    buffer = buffer.handle if buffer.kind_of? CLUMemory
     event_buf = event == nil ? nil : ' ' * 8
     num_events_in_wait_list = event_wait_list == nil ? 0 : event_wait_list.length
 
@@ -777,6 +822,7 @@ class CLUCommandQueue
   # const cl_event *   : event_wait_list
   # cl_event *         : event
   def enqueueFillBuffer(buffer, pattern, offset, size, command_queue: @command_queue, event_wait_list: nil, event: nil, error_info: nil)
+    buffer = buffer.handle if buffer.kind_of? CLUMemory
     event_buf = event == nil ? nil : ' ' * 8
     num_events_in_wait_list = event_wait_list == nil ? 0 : event_wait_list.length
     # size_t             : pattern_size
@@ -798,6 +844,8 @@ class CLUCommandQueue
   # const cl_event *   : event_wait_list
   # cl_event *         : event
   def enqueueCopyBuffer(src_buffer, dst_buffer, src_offset, dst_offset, size, command_queue: @command_queue, event_wait_list: nil, event: nil, error_info: nil)
+    src_buffer = src_buffer.handle if src_buffer.kind_of? CLUMemory
+    dst_buffer = dst_buffer.handle if dst_buffer.kind_of? CLUMemory
     event_buf = event == nil ? nil : ' ' * 8
     num_events_in_wait_list = event_wait_list == nil ? 0 : event_wait_list.length
 
@@ -819,6 +867,7 @@ class CLUCommandQueue
   # const cl_event *     : event_wait_list
   # cl_event *           : event
   def enqueueReadImage(image, blocking_read, origin, region, row_pitch, slice_pitch, ptr, command_queue: @command_queue, event_wait_list: nil, event: nil, error_info: nil)
+    image = image.handle if image.kind_of? CLUMemory
     event_buf = event == nil ? nil : ' ' * 8
     num_events_in_wait_list = event_wait_list == nil ? 0 : event_wait_list.length
 
@@ -840,6 +889,7 @@ class CLUCommandQueue
   # const cl_event *     : event_wait_list
   # cl_event *           : event
   def enqueueWriteImage(image, blocking_write, origin, region, row_pitch, slice_pitch, ptr, command_queue: @command_queue, event_wait_list: nil, event: nil, error_info: nil)
+    image = image.handle if image.kind_of? CLUMemory
     event_buf = event == nil ? nil : ' ' * 8
     num_events_in_wait_list = event_wait_list == nil ? 0 : event_wait_list.length
 
@@ -858,6 +908,7 @@ class CLUCommandQueue
   # const cl_event *   : event_wait_list
   # cl_event *         : event
   def enqueueFillImage(image, fill_color, origin, region, command_queue: @command_queue, event_wait_list: nil, event: nil, error_info: nil)
+    image = image.handle if image.kind_of? CLUMemory
     event_buf = event == nil ? nil : ' ' * 8
     num_events_in_wait_list = event_wait_list == nil ? 0 : event_wait_list.length
 
@@ -877,6 +928,8 @@ class CLUCommandQueue
   # const cl_event *     : event_wait_list
   # cl_event *           : event
   def enqueueCopyImage(src_image, dst_image, src_origin, dst_origin, region, command_queue: @command_queue, event_wait_list: nil, event: nil, error_info: nil)
+    src_image = src_image.handle if src_image.kind_of? CLUMemory
+    dst_image = dst_image.handle if dst_image.kind_of? CLUMemory
     event_buf = event == nil ? nil : ' ' * 8
     num_events_in_wait_list = event_wait_list == nil ? 0 : event_wait_list.length
 
@@ -896,6 +949,8 @@ class CLUCommandQueue
   # const cl_event * : event_wait_list
   # cl_event *       : event
   def enqueueCopyImageToBuffer(src_image, dst_buffer, src_origin, region, dst_offset, command_queue: @command_queue, event_wait_list: nil, event: nil, error_info: nil)
+    src_image = src_image.handle if src_image.kind_of? CLUMemory
+    dst_buffer = dst_buffer.handle if dst_buffer.kind_of? CLUMemory
     event_buf = event == nil ? nil : ' ' * 8
     num_events_in_wait_list = event_wait_list == nil ? 0 : event_wait_list.length
 
@@ -915,6 +970,8 @@ class CLUCommandQueue
   # const cl_event * : event_wait_list
   # cl_event *       : event
   def enqueueCopyBufferToImage(src_buffer, dst_image, src_offset, dst_origin, region, command_queue: @command_queue, event_wait_list: nil, event: nil, error_info: nil)
+    src_buffer = src_buffer.handle if src_buffer.kind_of? CLUMemory
+    dst_image = dst_image.handle if dst_image.kind_of? CLUMemory
     event_buf = event == nil ? nil : ' ' * 8
     num_events_in_wait_list = event_wait_list == nil ? 0 : event_wait_list.length
 
@@ -934,6 +991,7 @@ class CLUCommandQueue
   # const cl_event * : event_wait_list
   # cl_event *       : event
   def enqueueMapBuffer(buffer, blocking_map, map_flags, offset, size, command_queue: @command_queue, event_wait_list: nil, event: nil, error_info: nil)
+    buffer = buffer.handle if buffer.kind_of? CLUMemory
     event_buf = event == nil ? nil : ' ' * 8
     num_events_in_wait_list = event_wait_list == nil ? 0 : event_wait_list.length
     errcode_ret_buf = ' ' * 4
@@ -959,6 +1017,7 @@ class CLUCommandQueue
   # const cl_event *  : event_wait_list
   # cl_event *        : event
   def enqueueMapImage(buffer, blocking_map, map_flags, origin, region, command_queue: @command_queue, event_wait_list: nil, event: nil, error_info: nil)
+    buffer = buffer.handle if buffer.kind_of? CLUMemory
     event_buf = event == nil ? nil : ' ' * 8
     num_events_in_wait_list = event_wait_list == nil ? 0 : event_wait_list.length
     errcode_ret_buf = ' ' * 4
@@ -987,6 +1046,7 @@ class CLUCommandQueue
   # const cl_event * : event_wait_list
   # cl_event *       : event
   def enqueueUnmapMemObject(memobj, mapped_ptr, command_queue: @command_queue, event_wait_list: nil, event: nil, error_info: nil)
+    memobj = memobj.handle if memobj.kind_of? CLUMemory
     event_buf = event == nil ? nil : ' ' * 8
     num_events_in_wait_list = event_wait_list == nil ? 0 : event_wait_list.length
 
@@ -1006,6 +1066,7 @@ class CLUCommandQueue
   # const cl_event * : event_wait_list
   # cl_event *       : event
   def enqueueNDRangeKernel(kernel, work_dim, global_work_offset, global_work_size, local_work_size, command_queue: @command_queue, event_wait_list: nil, event: nil, error_info: nil)
+    kernel = kernel.handle if kernel.kind_of? CLUKernel
     event_buf = event == nil ? nil : ' ' * 8
     num_events_in_wait_list = event_wait_list == nil ? 0 : event_wait_list.length
 
@@ -1024,6 +1085,7 @@ class CLUCommandQueue
   # const cl_event *  : event_wait_list
   # cl_event *        : event
   def enqueueTask(kernel, command_queue: @command_queue, event_wait_list: nil, event: nil, error_info: nil)
+    kernel = kernel.handle if kernel.kind_of? CLUKernel
     event_buf = event == nil ? nil : ' ' * 8
     num_events_in_wait_list = event_wait_list == nil ? 0 : event_wait_list.length
 
@@ -1039,6 +1101,7 @@ class CLUCommandQueue
   # const cl_event *      : event_wait_list
   # cl_event *            : event
   def enqueueAcquireGLObjects(mem_objects, command_queue: @command_queue, event_wait_list: nil, event: nil, error_info: nil)
+    mem_objects.collect! {|mem_object| mem_object.kind_of?(CLUMemory) ? mem_object.mem.to_i : mem_object}
     event_buf = event == nil ? nil : ' ' * 8
     num_events_in_wait_list = event_wait_list == nil ? 0 : event_wait_list.length
 
@@ -1054,6 +1117,7 @@ class CLUCommandQueue
   # const cl_event *      : event_wait_list
   # cl_event *            : event
   def enqueueReleaseGLObjects(mem_objects, command_queue: @command_queue, event_wait_list: nil, event: nil, error_info: nil)
+    mem_objects.collect! {|mem_object| mem_object.kind_of?(CLUMemory) ? mem_object.mem.to_i : mem_object}
     event_buf = event == nil ? nil : ' ' * 8
     num_events_in_wait_list = event_wait_list == nil ? 0 : event_wait_list.length
 
@@ -1074,9 +1138,15 @@ class CLUProgram
     @program = nil
   end
 
+  def handle
+    @program
+  end
+
   # cl_context    : context
   # const char ** : strings
   def createProgramWithSource(context, strings, error_info: nil)
+    context = context.handle if context.kind_of? CLUContext
+
     # cl_uint        : count
     # const size_t * : lengths
     # cl_int *       : errcode_ret
@@ -1107,10 +1177,14 @@ class CLUProgram
     return OpenCL.clRetainProgram(program)
   end
 
+  alias_method :retain, :retainProgram
+
   # cl_program : program
   def releaseProgram(program: @program)
     return OpenCL.clReleaseProgram(program)
   end
+
+  alias_method :release, :releaseProgram
 
   # cl_program           : program
   # const cl_device_id * : device_list
@@ -1145,9 +1219,14 @@ class CLUKernel
     @name = nil
   end
 
+  def handle
+    @kernel
+  end
+
   # cl_program   : program
   # const char * : kernel_name
   def createKernel(program, kernel_name, error_info: nil)
+    program = program.handle if program.kind_of? CLUProgram
     errcode_ret_buf = ' ' * 4
     kernel = OpenCL.clCreateKernel(program, kernel_name, errcode_ret_buf)
     errcode_ret = errcode_ret_buf.unpack("l")[0]
@@ -1206,10 +1285,14 @@ class CLUKernel
     return OpenCL.clRetainKernel(kernel)
   end
 
+  alias_method :retain, :retainKernel
+
   # cl_kernel : kernel
   def releaseKernel(kernel: @kernel)
     return OpenCL.clReleaseKernel(kernel)
   end
+
+  alias_method :release, :releaseKernel
 
   def sizeof_type(fiddle_type)
     size = 0
@@ -1316,9 +1399,20 @@ class CLUKernel
   def setKernelArg(arg_index, arg_type, arg_value, kernel: @kernel)
     num_elements = arg_value.length
     arg_size = sizeof_type(arg_type) * num_elements
-    pack_arg = pack_format(arg_type) + num_elements.to_s
+    packed_arg_value = nil
+    if arg_value != nil
+      pack_arg = pack_format(arg_type) + num_elements.to_s
+      packed_arg_value = arg_value.pack(pack_arg)
+    end
 
-    return OpenCL.clSetKernelArg(kernel, arg_index, arg_size, arg_value.pack(pack_arg))
+    return OpenCL.clSetKernelArg(kernel, arg_index, arg_size, packed_arg_value)
+  end
+
+  # cl_kernel    : kernel
+  # cl_uint      : arg_index
+  # size_t       : arg_size
+  def setLocalKernelArg(arg_index, arg_size, kernel: @kernel)
+    return OpenCL.clSetKernelArg(kernel, arg_index, arg_size, nil)
   end
 
   # cl_kernel       : kernel
@@ -1332,6 +1426,12 @@ class CLUKernel
     param_value_buf = ' ' * param_value_buf_length
     param_value_size_ret_buf = ' ' * 4
 
+    # Ref.: https://www.khronos.org/registry/cl/sdk/1.2/docs/man/xhtml/clGetKernelArgInfo.html
+    #
+    # Notes : Kernel argument information is only available if the program
+    # object associated with kernel is created with clCreateProgramWithSource
+    # and the program executable is built with the -cl-kernel-arg-info option
+    # specified in options argument to clBuildProgram or clCompileProgram.
     err = OpenCL.clGetKernelArgInfo(kernel, arg_index, param_name, param_value_buf_length, param_value_buf, param_value_size_ret_buf)
     error_info << err if error_info != nil
     param_value_size_ret = param_value_size_ret_buf.unpack("L")[0]

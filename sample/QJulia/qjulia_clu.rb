@@ -185,35 +185,35 @@ def init_cl()
   # Platform
   clu_platform = CLUPlatform.new
 
-  OpenCL.import_ext(clu_platform.platforms[0])
+  OpenCL.import_ext(clu_platform[0])
   OpenCL.import_gl
-  OpenCL.import_gl_ext(clu_platform.platforms[0])
+  OpenCL.import_gl_ext(clu_platform[0])
 
   # Devices
-  clu_device = CLUDevice.new(clu_platform.platforms[0], CL_DEVICE_TYPE_GPU)
+  clu_device = CLUDevice.new(clu_platform[0], CL_DEVICE_TYPE_GPU)
 
   # Check functionality
   image_support = clu_device.getDeviceInfo(CL_DEVICE_IMAGE_SUPPORT)
   abort("Qjulia requires images: Images not supported on this device.") if image_support == CL_FALSE
 
   # Context
-  $clu_ctx = CLUContext.newContextWithGLInterop([CL_CONTEXT_PLATFORM, clu_platform.platforms[0], 0], clu_device.devices, clu_platform.platforms[0])
+  $clu_ctx = CLUContext.newContextWithGLInterop([CL_CONTEXT_PLATFORM, clu_platform[0], 0], clu_device.devices, clu_platform[0])
 
   # Command Queues
-  $clu_cq = CLUCommandQueue.newCommandQueue($clu_ctx.context, clu_device.devices[0])
+  $clu_cq = CLUCommandQueue.newCommandQueue($clu_ctx, clu_device[0])
 
   kernel_source = "#define WIDTH (#{$width})\n#define HEIGHT (#{$height})\n" + File.read("qjulia_kernel.cl")
-  $clu_prog = CLUProgram.newProgramWithSource($clu_ctx.context, [kernel_source])
+  $clu_prog = CLUProgram.newProgramWithSource($clu_ctx, [kernel_source])
   $clu_prog.buildProgram(clu_device.devices)
-  $clu_kern = CLUKernel.newKernel($clu_prog.program, "QJuliaKernel")
+  $clu_kern = CLUKernel.newKernel($clu_prog, "QJuliaKernel")
 
-  $max_workgroup_size = $clu_kern.getKernelWorkGroupInfo(CL_KERNEL_WORK_GROUP_SIZE, clu_device.devices[0])
+  $max_workgroup_size = $clu_kern.getKernelWorkGroupInfo(CL_KERNEL_WORK_GROUP_SIZE, clu_device[0])
 
   $workgroup_size[0] = $max_workgroup_size > 1 ? ($max_workgroup_size / $workgroup_items) : $max_workgroup_size
   $workgroup_size[1] = $max_workgroup_size / $workgroup_size[0]
 
-  $clu_image_memobj = CLUMemory.newFromGLTexture($clu_ctx.context, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, $gl_tex_id)
-  $clu_result_memobj = CLUMemory.newBuffer($clu_ctx.context, CL_MEM_WRITE_ONLY, Fiddle::SIZEOF_CHAR * 4 * $width * $height)
+  $clu_image_memobj = CLUMemory.newFromGLTexture($clu_ctx, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, $gl_tex_id)
+  $clu_result_memobj = CLUMemory.newBuffer($clu_ctx, CL_MEM_WRITE_ONLY, Fiddle::SIZEOF_CHAR * 4 * $width * $height)
 
   random_color($color_A)
   random_color($color_B)
@@ -230,12 +230,12 @@ def recompute()
             ($height % $workgroup_size[1] != 0 ? ($height / $workgroup_size[1] + 1) : $height / $workgroup_size[1]) * $workgroup_size[1]]
   local = [$workgroup_size[0], $workgroup_size[1]]
 
-  $clu_cq.enqueueNDRangeKernel($clu_kern.kernel, 2, nil, global, local)
-  $clu_cq.enqueueAcquireGLObjects([$clu_image_memobj.mem.to_i])
+  $clu_cq.enqueueNDRangeKernel($clu_kern, 2, nil, global, local)
+  $clu_cq.enqueueAcquireGLObjects([$clu_image_memobj])
   origin = [0, 0, 0]
   region = [$width, $height, 1]
-  $clu_cq.enqueueCopyBufferToImage($clu_result_memobj.mem, $clu_image_memobj.mem, 0, origin, region)
-  $clu_cq.enqueueReleaseGLObjects([$clu_image_memobj.mem.to_i])
+  $clu_cq.enqueueCopyBufferToImage($clu_result_memobj, $clu_image_memobj, 0, origin, region)
+  $clu_cq.enqueueReleaseGLObjects([$clu_image_memobj])
 end
 
 ################################################################################
