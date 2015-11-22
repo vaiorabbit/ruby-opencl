@@ -1404,7 +1404,6 @@ class CLUKernel
       pack_arg = pack_format(arg_type) + num_elements.to_s
       packed_arg_value = arg_value.pack(pack_arg)
     end
-
     return OpenCL.clSetKernelArg(kernel, arg_index, arg_size, packed_arg_value)
   end
 
