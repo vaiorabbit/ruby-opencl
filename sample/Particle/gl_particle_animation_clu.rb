@@ -239,7 +239,7 @@ if __FILE__ == $0
   SRC
 
   $clu_prog = CLUProgram.newProgramWithSource($clu_ctx, [kernel_source])
-  $clu_prog.buildProgram(clu_device.devices)
+  $clu_prog.buildProgram([clu_device[0]])
   $clu_kern = CLUKernel.newKernel($clu_prog, "particle_fountain")
 
   $clu_kern.setKernelArg(0, Fiddle::TYPE_VOIDP, [$clu_gl_position.handle.to_i])

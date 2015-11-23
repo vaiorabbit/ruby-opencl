@@ -2,7 +2,7 @@
 # By Matthew Scarpino, August 03, 2011
 # http://www.drdobbs.com/parallel/a-gentle-introduction-to-opencl/231002854
 
-require_relative '../lib/opencl'
+require 'opencl'
 
 # Load DLL
 begin

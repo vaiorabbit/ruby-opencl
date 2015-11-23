@@ -29,13 +29,12 @@ if $0 == __FILE__
   # Create device and context
   clu_platform = CLUPlatform.new
   clu_device = CLUDevice.new(clu_platform[0], CL_DEVICE_TYPE_DEFAULT)
-  clu_ctx = CLUContext.newContext(nil, clu_device.devices)
+  clu_ctx = CLUContext.newContext(nil, [clu_device[0]])
   abort("Couldn't create a context") if clu_ctx == nil
 
   # Build program
-  kernel_source = File.read(PROGRAM_FILE)
-  clu_prog = CLUProgram.newProgramWithSource(clu_ctx, [kernel_source])
-  clu_prog.buildProgram(clu_device.devices)
+  clu_prog = CLUProgram.newProgramWithSource(clu_ctx, [File.read(PROGRAM_FILE)])
+  clu_prog.buildProgram([clu_device[0]])
 
   # Create data buffer
   global_size = 8
@@ -43,7 +42,7 @@ if $0 == __FILE__
   num_groups = global_size/local_size
   input_buffer = CLUMemory.newBuffer(clu_ctx, CL_MEM_READ_ONLY  | CL_MEM_COPY_HOST_PTR, ARRAY_SIZE * Fiddle::SIZEOF_FLOAT, data.pack("F*"))
   sum_buffer   = CLUMemory.newBuffer(clu_ctx, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, num_groups * Fiddle::SIZEOF_FLOAT, sum.pack("F*"))
-p clu_ctx.class
+
   abort("Couldn't create a buffer") if input_buffer == nil || sum_buffer == nil
 
   # Create a command queue

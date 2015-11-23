@@ -33,11 +33,10 @@ $img_h = 4096
 if $0 == __FILE__
   clu_platform = CLUPlatform.new
   clu_device = CLUDevice.new(clu_platform[0], CL_DEVICE_TYPE_DEFAULT)
-  clu_ctx = CLUContext.newContext(nil, clu_device.devices)
+  clu_ctx = CLUContext.newContext(nil, [clu_device[0]])
 
-  kernel_source = File.read("mandelbrot.cl")
-  clu_prog = CLUProgram.newProgramWithSource(clu_ctx, [kernel_source])
-  clu_prog.buildProgram(clu_device.devices)
+  clu_prog = CLUProgram.newProgramWithSource(clu_ctx, [File.read("mandelbrot.cl")])
+  clu_prog.buildProgram([clu_device[0]])
   clu_kern = CLUKernel.newKernel(clu_prog, "mandelbrot")
 
   clu_cq = CLUCommandQueue.newCommandQueue(clu_ctx, clu_device[0])

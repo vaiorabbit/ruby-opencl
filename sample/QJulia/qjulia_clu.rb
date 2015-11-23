@@ -197,14 +197,13 @@ def init_cl()
   abort("Qjulia requires images: Images not supported on this device.") if image_support == CL_FALSE
 
   # Context
-  $clu_ctx = CLUContext.newContextWithGLInterop([CL_CONTEXT_PLATFORM, clu_platform[0], 0], clu_device.devices, clu_platform[0])
+  $clu_ctx = CLUContext.newContextWithGLInterop([CL_CONTEXT_PLATFORM, clu_platform[0], 0], [clu_device[0]], clu_platform[0])
 
   # Command Queues
   $clu_cq = CLUCommandQueue.newCommandQueue($clu_ctx, clu_device[0])
 
-  kernel_source = "#define WIDTH (#{$width})\n#define HEIGHT (#{$height})\n" + File.read("qjulia_kernel.cl")
-  $clu_prog = CLUProgram.newProgramWithSource($clu_ctx, [kernel_source])
-  $clu_prog.buildProgram(clu_device.devices)
+  $clu_prog = CLUProgram.newProgramWithSource($clu_ctx, [File.read("qjulia_kernel.cl")])
+  $clu_prog.buildProgram([clu_device[0]], options: "-DWIDTH=#{$width} -DHEIGHT=#{$height}")
   $clu_kern = CLUKernel.newKernel($clu_prog, "QJuliaKernel")
 
   $max_workgroup_size = $clu_kern.getKernelWorkGroupInfo(CL_KERNEL_WORK_GROUP_SIZE, clu_device[0])
@@ -221,7 +220,7 @@ def init_cl()
 end
 
 def recompute()
-  $clu_kern.setKernelArg(0, Fiddle::TYPE_VOIDP, [$clu_result_memobj.mem.to_i])
+  $clu_kern.setKernelArg(0, Fiddle::TYPE_VOIDP, [$clu_result_memobj.handle.to_i])
   $clu_kern.setKernelArg(1, Fiddle::TYPE_FLOAT, $mu_C)
   $clu_kern.setKernelArg(2, Fiddle::TYPE_FLOAT, $color_C)
   $clu_kern.setKernelArg(3, Fiddle::TYPE_FLOAT, [0.003])
