@@ -5,7 +5,7 @@
 A Ruby binding for OpenCL 1.2
 
 *   Created : 2015-10-25
-*   Last modified : 2015-11-22
+*   Last modified : 2015-11-23
 
 
 ## Features ##
