@@ -1,4 +1,5 @@
 require_relative '../lib/opencl'
+require_relative '../lib/opencl_ext'
 
 # Load DLL
 begin
@@ -276,6 +277,92 @@ end
 
 ################################################################################
 
+$imageformat2name = {
+  # cl_channel_order
+  OpenCL::CL_R                => "CL_R",
+  OpenCL::CL_A                => "CL_A",
+  OpenCL::CL_RG               => "CL_RG",
+  OpenCL::CL_RA               => "CL_RA",
+  OpenCL::CL_RGB              => "CL_RGB",
+  OpenCL::CL_RGBA             => "CL_RGBA",
+  OpenCL::CL_BGRA             => "CL_BGRA",
+  OpenCL::CL_ARGB             => "CL_ARGB",
+  OpenCL::CL_INTENSITY        => "CL_INTENSITY",
+  OpenCL::CL_LUMINANCE        => "CL_LUMINANCE",
+  OpenCL::CL_Rx               => "CL_Rx",
+  OpenCL::CL_RGx              => "CL_RGx",
+  OpenCL::CL_RGBx             => "CL_RGBx",
+  OpenCL::CL_DEPTH            => "CL_DEPTH",
+  OpenCL::CL_DEPTH_STENCIL    => "CL_DEPTH_STENCIL",
+
+  # cl_channel_type
+  OpenCL::CL_SNORM_INT8       => "CL_SNORM_INT8",
+  OpenCL::CL_SNORM_INT16      => "CL_SNORM_INT16",
+  OpenCL::CL_UNORM_INT8       => "CL_UNORM_INT8",
+  OpenCL::CL_UNORM_INT16      => "CL_UNORM_INT16",
+  OpenCL::CL_UNORM_SHORT_565  => "CL_UNORM_SHORT_565",
+  OpenCL::CL_UNORM_SHORT_555  => "CL_UNORM_SHORT_555",
+  OpenCL::CL_UNORM_INT_101010 => "CL_UNORM_INT_101010",
+  OpenCL::CL_SIGNED_INT8      => "CL_SIGNED_INT8",
+  OpenCL::CL_SIGNED_INT16     => "CL_SIGNED_INT16",
+  OpenCL::CL_SIGNED_INT32     => "CL_SIGNED_INT32",
+  OpenCL::CL_UNSIGNED_INT8    => "CL_UNSIGNED_INT8",
+  OpenCL::CL_UNSIGNED_INT16   => "CL_UNSIGNED_INT16",
+  OpenCL::CL_UNSIGNED_INT32   => "CL_UNSIGNED_INT32",
+  OpenCL::CL_HALF_FLOAT       => "CL_HALF_FLOAT",
+  OpenCL::CL_FLOAT            => "CL_FLOAT",
+  OpenCL::CL_UNORM_INT24      => "CL_UNORM_INT24",
+
+  # 0x10000012 : ABGR and xBGR formats for CoreImage CL-GPU support (from /OpenCL.framework/Headers/cl_ext.h)
+  OpenCL::CL_ABGR_APPLE       => "CL_ABGR_APPLE",
+
+  # cl_APPLE_fixed_alpha_channel_orders (from /OpenCL.framework/Headers/cl_ext.h)
+
+  # 0x10000006
+  OpenCL::CL_1RGB_APPLE => "CL_1RGB_APPLE",
+  # 0x10000007
+  OpenCL::CL_BGR1_APPLE => "CL_BGR1_APPLE",
+
+  # cl_APPLE_biased_fixed_point_image_formats (from /OpenCL.framework/Headers/cl_ext.h)
+
+  # 0x10000008
+  CL_SFIXED14_APPLE => "CL_SFIXED14_APPLE",
+  # 0x10000009
+  CL_BIASED_HALF_APPLE => "CL_BIASED_HALF_APPLE",
+
+  # YUV image support (from /OpenCL.framework/Headers/cl_ext.h)
+
+  # 0x10000010
+  OpenCL::CL_YCbYCr_APPLE => "OpenCL::CL_YCbYCr_APPLE",
+  # 0x10000011
+  OpenCL::CL_CbYCrY_APPLE => "OpenCL::CL_CbYCrY_APPLE",
+}
+
+def print_supported_image_formats(cl_ctx, image_type = OpenCL::CL_MEM_OBJECT_IMAGE2D)
+  return unless (image_type == CL_MEM_OBJECT_IMAGE2D || image_type == CL_MEM_OBJECT_IMAGE3D)
+  err = 0
+
+  image_formats = []
+
+  num_image_formamts_buf = ' ' * 4
+  err = clGetSupportedImageFormats(cl_ctx, CL_MEM_READ_ONLY, image_type, 0, nil, num_image_formamts_buf)
+  num_image_formamts = num_image_formamts_buf.unpack("L")[0]
+  image_formats_buf = Fiddle::Pointer.malloc(num_image_formamts * OpenCL::CL_STRUCT_IMAGE_FORMAT.size)
+  err = clGetSupportedImageFormats(cl_ctx, CL_MEM_READ_ONLY, image_type, num_image_formamts, image_formats_buf, nil)
+
+  num_image_formamts.times do |i|
+    fmt = OpenCL::CL_STRUCT_IMAGE_FORMAT.new(image_formats_buf.to_i + i * OpenCL::CL_STRUCT_IMAGE_FORMAT.size)
+    image_formats << fmt
+  end
+
+  puts "Supported Image Formats (#{image_type == CL_MEM_OBJECT_IMAGE2D ? '2D' : '3D'})"
+  image_formats.each_with_index do |fmt, i|
+    puts "\t#{i}:\t#{$imageformat2name[fmt.image_channel_order]} - #{$imageformat2name[fmt.image_channel_data_type]}"
+  end
+end
+
+################################################################################
+
 if __FILE__ == $0
 
   err = 0
@@ -325,10 +412,20 @@ if __FILE__ == $0
   cl_devices_count.times do |i|
     err = clGetDeviceInfo(cl_devices[i], CL_DEVICE_NAME, info_buf.length, info_buf, nil)
     puts "================================================================================"
-    puts "\tCL_DEVICE_NAME: #{info_buf.unpack("Z*")[0]}"
+    puts "CL_DEVICE_NAME: #{info_buf.unpack("Z*")[0]}"
     puts "================================================================================"
     print_device_info(cl_devices[i])
     puts ""
   end
 
+  # Supported Image Formats
+  cl_ctx = clCreateContext(nil, cl_devices_count, cl_devices.pack("Q*"), nil, nil, nil)
+
+  # 2D
+  print_supported_image_formats(cl_ctx, CL_MEM_OBJECT_IMAGE2D)
+
+  puts ""
+
+  # 3D
+  print_supported_image_formats(cl_ctx, CL_MEM_OBJECT_IMAGE3D)
 end
