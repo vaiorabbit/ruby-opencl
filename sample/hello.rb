@@ -33,7 +33,7 @@ cl_device_ids = cl_devices_buf.unpack("Q#{cl_devices_entry_count}")
 
 # Context
 errcode_ret_buf = ' ' * 4
-cl_ctx = OpenCL.clCreateContext(nil, 1, cl_devices_buf, nil, nil, errcode_ret_buf)
+cl_ctx = clCreateContext(nil, 1, cl_devices_buf, nil, nil, errcode_ret_buf)
 
 # Command Queues
 cl_cq = clCreateCommandQueue(cl_ctx, cl_device_ids[0], 0, errcode_ret_buf)

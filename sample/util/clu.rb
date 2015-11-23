@@ -1196,13 +1196,15 @@ class CLUProgram
     err = OpenCL.clBuildProgram(program, num_devices, device_list.pack("Q*"), options, pfn_notify, user_data)
 
     if err < 0 && error_info != nil
-      log_size_buf = ' ' * 4
-      OpenCL.clGetProgramBuildInfo(program, device_list[0], OpenCL::CL_PROGRAM_BUILD_LOG, 0, nil, log_size_buf)
-      log_size = log_size_buf.unpack("L")[0]
-      program_log = ' ' * log_size
-      OpenCL.clGetProgramBuildInfo(program, device_list[0], OpenCL::CL_PROGRAM_BUILD_LOG, log_size, program_log, nil)
+      num_devices.times do |i|
+        log_size_buf = ' ' * 4
+        OpenCL.clGetProgramBuildInfo(program, device_list[0], OpenCL::CL_PROGRAM_BUILD_LOG, 0, nil, log_size_buf)
+        log_size = log_size_buf.unpack("L")[0]
+        program_log = ' ' * log_size
+        OpenCL.clGetProgramBuildInfo(program, device_list[0], OpenCL::CL_PROGRAM_BUILD_LOG, log_size, program_log, nil)
 
-      error_info << program_log
+        error_info << program_log
+      end
     end
 
     return err
