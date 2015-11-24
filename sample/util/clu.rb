@@ -255,8 +255,8 @@ end
 class CLUContext
   attr_reader :context
 
-  def initialize
-    @context = nil # cl_context
+  def initialize(h = nil)
+    @context = h # cl_context
   end
 
   def handle
@@ -411,8 +411,8 @@ end
 class CLUMemory
   attr_reader :mem # cl_mem
 
-  def initialize
-    @mem = nil
+  def initialize(h = nil)
+    @mem = h
   end
 
   def handle
@@ -691,8 +691,8 @@ end
 class CLUCommandQueue
   attr_reader :command_queue # cl_command_queue
 
-  def initialize
-    @command_queue = nil # cl_command_queue
+  def initialize(h = nil)
+    @command_queue = h # cl_command_queue
   end
 
   def handle
@@ -1134,8 +1134,8 @@ end
 class CLUProgram
   attr_reader :program # cl_program
 
-  def initialize
-    @program = nil
+  def initialize(h = nil)
+    @program = h
   end
 
   def handle
@@ -1216,8 +1216,8 @@ end
 class CLUKernel
   attr_reader :kernel, :name # cl_kernel and the name of '__kernel' entry point
 
-  def initialize
-    @kernel = nil
+  def initialize(h = nil)
+    @kernel = h
     @name = nil
   end
 
@@ -1498,34 +1498,120 @@ end
 ################################################################################
 
 class CLUEvent
-  attr_reader :event, :name # cl_event
+  attr_reader :event # cl_event
 
-  def initialize
-    @event = nil
+  def initialize(h = nil)
+    @event = h
   end
 
   def handle
     @event
   end
 
-  # clWaitForEvents
-  # clGetEventInfo
-  # clCreateUserEvent
-  # clRetainEvent
-  # clReleaseEvent
-  # clSetUserEventStatus
-  # clSetEventCallback
-  # clGetEventProfilingInfo
+  # const cl_event *    : event_list
+  def self.waitForEvents(event_list)
+    event_list.collect! {|event| event.kind_of?(CLUEvent) ? event.handle.to_i : event}
+    # cl_uint : num_events
+    num_events = event_list.length
 
+    err = OpenCL.clWaitForEvents(num_events, event_list.pack("Q*"))
+    return err
+  end
+
+  def wait(event: @event)
+    return self.waitForEvents([event])
+  end
+
+  # cl_context          : context
+  def createUserEvent(context, error_info: nil)
+    context = context.handle if context.kind_of? CLUContext
+    errcode_ret_buf = ' ' * 4
+
+    cl_event = OpenCL.clCreateUserEvent(context, errcode_ret_buf)
+    errcode_ret = errcode_ret_buf.unpack("l")[0]
+    error_info << errcode_ret if error_info != nil
+
+    if errcode_ret == OpenCL::CL_SUCCESS
+      @event = cl_event
+      return @event
+    else
+      return nil
+    end
+  end
+
+  def self.newUserEvent(context, error_info: nil)
+    obj = CLUEvent.new
+    ret = obj.createUserEvent(context, error_info: error_info)
+    return ret == nil ? nil : obj
+  end
+
+  # cl_event   : event
+  # cl_int     : execution_status
+  def setUserEventStatus(execution_status, event: @event)
+    err = OpenCL.clSetUserEventStatus(event, execution_status)
+    return err
+  end
+
+  # cl_event : event
+  # cl_int   : command_exec_callback_type
+  # void *   : pfn_notify(cl_program, void*)
+  # void *   : user_data
+  def setEventCallback(command_exec_callback_type, pfn_notify, user_data, event: @event)
+    err = OpenCL.clSetEventCallback(event, command_exec_callback_type, pfn_notify, user_data)
+    return err
+  end
+
+  # cl_event : event
+  def retainEvent(event: @event)
+    return OpenCL.clRetainEvent(event)
+  end
+
+  alias_method :retain, :retainEvent
+
+  # cl_event : event
+  def releaseEvent(event: @event)
+    return OpenCL.clReleaseEvent(event)
+  end
+
+  alias_method :release, :releaseEvent
+
+  # cl_event      : event
+  # cl_event_info : param_name
+  def getEventInfo(param_name, event: @event, error_info: nil)
+    # size_t          : param_value_size
+    # void *          : param_value
+    # size_t *        : param_value_size_ret
+    param_value_buf_length = 1024
+    param_value_buf = ' ' * param_value_buf_length
+    param_value_size_ret_buf = ' ' * 4
+
+    err = OpenCL.clGetEventInfo(event, param_name, param_value_buf_length, param_value_buf, param_value_size_ret_buf)
+    error_info << err if error_info != nil
+
+    param_value_size_ret = param_value_size_ret_buf.unpack("L")[0]
+
+    unpack_format = @@event_info_param2unpack[param_name]
+    return param_value_buf.unpack(unpack_format)[0]
+  end
+
+  @@event_info_param2unpack = {
+    OpenCL::CL_EVENT_COMMAND_QUEUE => "Q",
+    OpenCL::CL_EVENT_CONTEXT => "Q",
+    OpenCL::CL_EVENT_COMMAND_TYPE => "L",
+    OpenCL::CL_EVENT_COMMAND_EXECUTION_STATUS => "l",
+    OpenCL::CL_EVENT_REFERENCE_COUNT => "L",
+  }
+
+  # clGetEventProfilingInfo
 end
 
 ################################################################################
 
 class CLUSampler
-  attr_reader :sampler, :name # cl_sampler
+  attr_reader :sampler # cl_sampler
 
-  def initialize
-    @sampler = nil
+  def initialize(h = nil)
+    @sampler = h
   end
 
   def handle
