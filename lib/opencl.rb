@@ -964,7 +964,7 @@ module OpenCL
 
     # Profiling APIs
 
-    # cl_event          :  event
+    # cl_event          : event
     # cl_profiling_info : param_name 
     # size_t            : param_value_size
     # void *            : param_value 

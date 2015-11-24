@@ -1497,6 +1497,116 @@ end
 
 ################################################################################
 
+class CLUEvent
+  attr_reader :event, :name # cl_event
+
+  def initialize
+    @event = nil
+  end
+
+  def handle
+    @event
+  end
+
+  # clWaitForEvents
+  # clGetEventInfo
+  # clCreateUserEvent
+  # clRetainEvent
+  # clReleaseEvent
+  # clSetUserEventStatus
+  # clSetEventCallback
+  # clGetEventProfilingInfo
+
+end
+
+################################################################################
+
+class CLUSampler
+  attr_reader :sampler, :name # cl_sampler
+
+  def initialize
+    @sampler = nil
+  end
+
+  def handle
+    @sampler
+  end
+
+  # cl_context          : context
+  # cl_bool             : normalized_coords
+  # cl_addressing_mode  : addressing_mode
+  # cl_filter_mode      : filter_mode
+  def createSampler(context, normalized_coords, addressing_mode, filter_mode, error_info: nil)
+    context = context.handle if context.kind_of? CLUContext
+    errcode_ret_buf = ' ' * 4
+
+    cl_smp = OpenCL.clCreateSampler(context, normalized_coords, addressing_mode, filter_mode, errcode_ret_buf)
+    errcode_ret = errcode_ret_buf.unpack("l")[0]
+    error_info << errcode_ret if error_info != nil
+
+    if errcode_ret == OpenCL::CL_SUCCESS
+      @sampler = cl_smp
+      return @sampler
+    else
+      return nil
+    end
+  end
+
+  def self.newSampler(context, normalized_coords, addressing_mode, filter_mode, error_info: nil)
+    obj = CLUSampler.new
+    ret = obj.createSampler(context, normalized_coords, addressing_mode, filter_mode, error_info: error_info)
+    return ret == nil ? nil : obj
+  end
+
+  # cl_sampler : sampler
+  def retainSampler(sampler: @sampler)
+    return OpenCL.clRetainSampler(sampler)
+  end
+
+  alias_method :retain, :retainSampler
+
+  # cl_sampler : sampler
+  def releaseSampler(sampler: @sampler)
+    return OpenCL.clReleaseSampler(sampler)
+  end
+
+  alias_method :release, :releaseSampler
+
+  # cl_sampler      : sampler
+  # cl_sampler_info : param_name
+  def getSamplerInfo(param_name, sampler: @sampler, error_info: nil)
+    # size_t          : param_value_size
+    # void *          : param_value
+    # size_t *        : param_value_size_ret
+    param_value_buf_length = 1024
+    param_value_buf = ' ' * param_value_buf_length
+    param_value_size_ret_buf = ' ' * 4
+
+    err = OpenCL.clGetSamplerInfo(sampler, param_name, param_value_buf_length, param_value_buf, param_value_size_ret_buf)
+    error_info << err if error_info != nil
+
+    param_value_size_ret = param_value_size_ret_buf.unpack("L")[0]
+
+    unpack_format = @@param2unpack[param_name]
+    case unpack_format
+    when "cl_bool"
+      return param_value_buf.unpack("L")[0] == 0 ? false : true
+    else
+      return param_value_buf.unpack(unpack_format)[0]
+    end
+  end
+
+  @@param2unpack = {
+    OpenCL::CL_SAMPLER_REFERENCE_COUNT => "L",
+    OpenCL::CL_SAMPLER_CONTEXT => "Q",
+    OpenCL::CL_SAMPLER_NORMALIZED_COORDS => "cl_bool",
+    OpenCL::CL_SAMPLER_ADDRESSING_MODE => "L",
+    OpenCL::CL_SAMPLER_FILTER_MODE => "L",
+  }
+end
+
+################################################################################
+
 class CLU
 
   @@image_format = {
