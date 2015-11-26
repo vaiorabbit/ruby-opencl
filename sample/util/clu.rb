@@ -720,7 +720,7 @@ class CLUCommandQueue
 
   def self.newCommandQueue(context, device, properties = 0, error_info: nil)
     obj = CLUCommandQueue.new
-    ret = obj.createCommandQueue(context, device, 0, error_info: error_info)
+    ret = obj.createCommandQueue(context, device, properties, error_info: error_info)
     return ret == nil ? nil : obj
   end
 
@@ -1519,7 +1519,7 @@ class CLUEvent
   end
 
   def wait(event: @event)
-    return self.waitForEvents([event])
+    return self.class.waitForEvents([event])
   end
 
   # cl_context          : context
@@ -1602,7 +1602,31 @@ class CLUEvent
     OpenCL::CL_EVENT_REFERENCE_COUNT => "L",
   }
 
-  # clGetEventProfilingInfo
+  # cl_event          : event
+  # cl_profiling_info : param_name 
+  def getEventProfilingInfo(param_name, event: @event, error_info: nil)
+    # size_t          : param_value_size
+    # void *          : param_value
+    # size_t *        : param_value_size_ret
+    param_value_buf_length = 1024
+    param_value_buf = ' ' * param_value_buf_length
+    param_value_size_ret_buf = ' ' * 4
+
+    err = OpenCL.clGetEventProfilingInfo(event, param_name, param_value_buf_length, param_value_buf, param_value_size_ret_buf)
+    error_info << err if error_info != nil
+
+    param_value_size_ret = param_value_size_ret_buf.unpack("L")[0]
+
+    unpack_format = @@event_profinfo_param2unpack[param_name]
+    return param_value_buf.unpack(unpack_format)[0]
+  end
+
+  @@event_profinfo_param2unpack = {
+    OpenCL::CL_PROFILING_COMMAND_QUEUED => "Q",
+    OpenCL::CL_PROFILING_COMMAND_SUBMIT => "Q",
+    OpenCL::CL_PROFILING_COMMAND_START => "Q",
+    OpenCL::CL_PROFILING_COMMAND_END => "Q",
+  }
 end
 
 ################################################################################

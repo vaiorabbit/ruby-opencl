@@ -1,3 +1,8 @@
+2015-11-26  vaiorabbit  <http://twitter.com/vaiorabbit>
+
+	* sample/Mandelbrot/mandelbrot_prof.rb, mandelbrot_prof.cl: Added.
+	* sample/util/clu.rb (CLUEvent.getEventProfilingInfo): Added.
+
 2015-11-23  vaiorabbit  <http://twitter.com/vaiorabbit>
 
 	* sample/report_env.rb: Added.
