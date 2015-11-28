@@ -1,3 +1,7 @@
+2015-11-28  vaiorabbit  <http://twitter.com/vaiorabbit>
+
+	* sample/Mandelbrot/mandelbrot_per4.rb, mandelbrot_per4.cl: Added.
+
 2015-11-26  vaiorabbit  <http://twitter.com/vaiorabbit>
 
 	* sample/Mandelbrot/mandelbrot_prof.rb, mandelbrot_prof.cl: Added.
