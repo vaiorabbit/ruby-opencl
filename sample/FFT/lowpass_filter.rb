@@ -22,11 +22,11 @@ if $0 == __FILE__
   buffer = fft.apply_dft_dumb(buffer)
 
   hl = buffer.width / 2
-  r = buffer.width / 1.48
+  r = buffer.width / 1.5
   buffer.height.times do |h|
     buffer.width.times do |w|
       d2 = (w - hl)**2 + (h - hl)**2
-      if d2 > r**2
+      if d2 < r**2
         buffer.set_elem(w, h, 0.0, 0.0)
       end
     end
