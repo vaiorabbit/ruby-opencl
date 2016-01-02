@@ -15,7 +15,9 @@ if $0 == __FILE__
   end
 
   fft = FFT2D.new(w)
-  buffer = fft.create_buffer(signal_src, w, h)
+  buffer = FFT2D::Buffer.new(signal_src, w, h)
+  buffer = fft.apply_fft(buffer)
+exit
 
   buffer = fft.apply_dft_dumb(buffer)
   buffer.transpose()

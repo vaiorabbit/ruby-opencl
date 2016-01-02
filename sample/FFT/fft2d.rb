@@ -12,12 +12,12 @@ class FFT2D
     end
 
     def get_elem(i, j)
-      return @real[i*@width + j], @imag[i*@width + j]
+      return @real[i*@height + j], @imag[i*@height + j]
     end
 
     def set_elem(i, j, vr, vi)
-      @real[i*@width + j] = vr
-      @imag[i*@width + j] = vi
+      @real[i*@height + j] = vr
+      @imag[i*@height + j] = vi
     end
 
     def get_transposed()
@@ -43,6 +43,29 @@ class FFT2D
       end
       @width, @height = @height, @width
     end
+
+    def bit_reversal(x, exponent)
+      bits = x.to_s(2)
+      # print "\t#{'0' * (@exponent - bits.length) + bits}"
+      bits = "0" * (32 - bits.length) + bits
+      rev = bits.reverse.slice(0, exponent)
+      # print "\t#{rev}"
+      return rev.to_i(2)
+    end
+    private :bit_reversal
+
+    def get_permuted(exponent)
+      buf_dst = Buffer.new(nil, @width, @height)
+      @height.times do |h|
+        @width.times do |w|
+          rev = bit_reversal(w, exponent)
+          vr, vi = get_elem(rev, h)
+          buf_dst.set_elem(w, h, vr, vi)
+        end
+      end
+      return buf_dst
+    end
+
   end
 
   attr_reader :window_length, :twiddle_factor
@@ -80,30 +103,6 @@ class FFT2D
       pos -= @window_length / 2
       return -@twiddle_factor[2*pos], @twiddle_factor[2*pos+1]
     end
-  end
-
-  def create_buffer(src, width, height)
-    return Buffer.new(src, width, height)
-  end
-
-  def bit_reversal(x)
-    bits = x.to_s(2)
-    # print "\t#{'0' * (@exponent - bits.length) + bits}"
-    bits = "0" * (32 - bits.length) + bits
-    rev = bits.reverse.slice(0, @exponent)
-    # print "\t#{rev}"
-    return rev.to_i(2)
-  end
-
-  def permute(buf_src)
-    buf_dst = Buffer.new(buf_src.real)
-    buf_src.real.length.times do |i|
-      rev = bit_reversal(i)
-      real, imag = buf_src.real[rev], buf_src.imag[rev]
-      buf_dst.real[i] = real
-      buf_dst.imag[i] = imag
-    end
-    return buf_dst
   end
 
   def apply_dft_dumb(buf_src)
@@ -146,4 +145,44 @@ class FFT2D
     return buf_dst
   end
 
+  def apply_fft(buf_src)
+    buf_tmp = buf_src.get_permuted(@exponent)
+    buf_dst = Buffer.new(nil, buf_src.width, buf_src.height)
+    buf_dst.height.times do |h|
+      (1..@exponent).each do |e|                  # 1, 2, 3 (@exponent==3)
+        muladd_dist = 2 ** (e-1)                  # 1, 2, 4 (@exponent==3)
+        muladd_group_count = 2 ** (@exponent - e) # 4, 2, 1 (@exponent==3)
+        muladd_group_member_count = 2 ** e        # 2, 4, 8 (@exponent==3)
+        butterfly_count = muladd_group_member_count / 2 # Number of butterflys in a group
+        muladd_group_count.times do |g|
+          base = muladd_group_member_count * g
+          butterfly_count.times do |b|
+            wing0 = base + b
+            wing1 = wing0 + muladd_dist
+            prev_val0_r, prev_val0_i = buf_tmp.get_elem(wing0, h)
+            prev_val1_r, prev_val1_i = buf_tmp.get_elem(wing1, h)
+            wr, wi = get_dft_twiddle_factor(k*i)
+#            next_val0 = prev_val0 + 
+          end
+        end
+=begin
+        @window_length.times do |k|
+          rk = 0.0
+          ik = 0.0
+          @window_length.times do |i|
+            wr, wi = get_dft_twiddle_factor(k*i)
+            vr, vi = buf_src.get_elem(i, h)
+            rk += vr * wr - vi * wi
+            ik += vr * wi + vi * wr
+          end
+          buf_dst.set_elem(k, h, rk, ik)
+        end
+=end
+      end
+    end
+    return buf_dst
+  end
+
+  def apply_ifft(buf_src)
+  end
 end
