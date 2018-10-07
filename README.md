@@ -8,6 +8,10 @@ A Ruby binding for OpenCL 1.2
 *   Last modified : 2016-01-03
 
 
+[![](http://img.youtube.com/vi/4MWRwxzHdmk/mqdefault.jpg)](https://www.youtube.com/watch?v=4MWRwxzHdmk)
+[![](http://img.youtube.com/vi/k2Z7VpeQDAg/mqdefault.jpg)](https://www.youtube.com/watch?v=k2Z7VpeQDAg)
+
+
 ## Features ##
 
 *   Based on Fiddle (One of the Ruby standard libraries that wraps libffi)
